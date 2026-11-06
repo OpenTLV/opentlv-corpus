@@ -188,7 +188,7 @@ The harness may send requests in any order and may restart the adapter between a
    An adapter still running after the exit grace period is killed.
    A non-zero exit status, or an exit timeout, is recorded for the session, not for a request: every request was answered before.
 
-The harness kills the adapter, with its process group where the platform has one, and starts a new one before the next request:
+The harness kills the adapter with every process it started, through its process group on POSIX systems and its job object on Windows, and starts a new one before the next request:
 
 - after a `timeout`, `protocol-error` or `harness-error`;
 - after a `crashed` request, except an `internal-error` answer, after which the adapter is still in a consistent state;
@@ -212,7 +212,7 @@ The harness enforces these limits; a runner configures them and records the valu
 | Standard error | 64 KiB per request | Text beyond it is dropped and the record marked as truncated |
 
 The protocol carries no memory limit.
-A runner may limit the adapter's memory with operating system facilities; exhausting it shows up as `crashed`, or as whatever the implementation answers when an allocation fails.
+A runner may limit the adapter's memory with operating system facilities, as the [runner](runner.md#bounds-and-containment) does; exhausting it shows up as `crashed`, or as whatever the implementation answers when an allocation fails.
 
 ## Classification
 

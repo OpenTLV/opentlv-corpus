@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Runner for resolved plans (`scripts/run.py`) with an immutable JSON Lines observation log (schema version 1): raw results, classifications, native diagnostics, session events and run provenance, without expectations or verdicts. Adapters run contained (process groups and `RLIMIT_AS` on POSIX, job objects on Windows) with restarts, bounded repetitions and start retries; checks the session could not reach are recorded as not run. (#7)
 - Execution plans (schema version 1): declarative selection that never depends on results, a shared `smoke` suite in the registry, and deterministic resolution against a pinned release and an adapter into a resolved plan with exact checks, digests and applicability, checked before every run. (#6)
 - Adapter process protocol version 1 (JSON Lines): handshake and capability descriptor, oracle-blind requests without case IDs, normalized observations, failure classification, limits and restart rules; schemas, golden transcripts, a stub adapter and an adapter conformance check. (#5)
 - Corpus validator with deterministic diagnostics, a reproducible data-only release (ustar archive, manifest schema, SHA-256 sums) readable without Python, immutable release records and a registered license vocabulary for case data. (#4)

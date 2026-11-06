@@ -9,14 +9,14 @@ The cases are language-neutral data, usable by OpenTLV Core, its bindings, OpenT
 ## Status
 
 The corpus is in its foundation phase.
-The test case, registry, lifecycle and release manifest schemas, the ID and namespace rules, the oracle contract, the canonical definition digest, the corpus validator, the data-only release, the adapter process protocol and execution plans with their deterministic resolution are defined; conformance cases and the runner follow.
+The test case, registry, lifecycle and release manifest schemas, the ID and namespace rules, the oracle contract, the canonical definition digest, the corpus validator, the data-only release, the adapter process protocol, execution plans with their deterministic resolution and the runner with its observation log are defined; conformance cases and verdicts follow.
 Schema version 1 and protocol version 1 are provisional until the first stable corpus release.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| [`schemas/`](schemas) | JSON Schemas (draft 2020-12) of the test case, registry, lifecycle log, release manifest, execution plan and resolved execution plan documents |
+| [`schemas/`](schemas) | JSON Schemas (draft 2020-12) of the test case, registry, lifecycle log, release manifest, execution plan, resolved execution plan and observation log documents |
 | [`registry/registry.json`](registry/registry.json) | Standard editions, ID namespaces and their allocations, rejection reasons, capabilities, licenses and shared suites such as `smoke` |
 | [`registry/lifecycle.json`](registry/lifecycle.json) | Append-only lifecycle log of the conformance cases |
 | [`examples/valid/`](examples/valid) | Example cases covering every construct of the schema |
@@ -33,6 +33,7 @@ Schema version 1 and protocol version 1 are provisional until the first stable c
 | [`scripts/protocol.py`](scripts/protocol.py) | Harness side of the adapter process protocol: framing, classification, sessions and restarts |
 | [`scripts/check_adapter.py`](scripts/check_adapter.py) | Checks that an adapter follows the adapter process protocol |
 | [`scripts/plan.py`](scripts/plan.py) | Execution plan model, resolution against a release and an adapter, and the check before a run |
+| [`scripts/run.py`](scripts/run.py) | Runs a resolved plan against an isolated adapter process and writes the observation log |
 | [`protocol/`](protocol) | JSON Schemas of the adapter protocol requests, responses and capability descriptor, and golden transcripts |
 | [`tests/stub_adapter.py`](tests/stub_adapter.py) | Minimal adapter, standard library only, that the protocol tests and transcripts use |
 | `releases/` | Manifests and checksums of published releases, never changed |
@@ -48,6 +49,7 @@ Schema version 1 and protocol version 1 are provisional until the first stable c
 - [Data release](docs/release.md): the data-only archive, its manifest and checksums, reproducibility, verification without Python and published release records.
 - [Adapter process protocol](docs/adapter-protocol.md): JSON Lines over standard streams, handshake and capability descriptor, oracle-blind requests, normalized observations, limits, lifecycle and restarts, failure classification and retries.
 - [Execution plans](docs/execution-plan.md): declarative selection, shared suites, deterministic resolution against a pinned release and an adapter, applicability decisions and the check before a run.
+- [Runner and observation log](docs/runner.md): running a resolved plan, failure handling, restarts and repetitions, the immutable JSON Lines observation log, time, memory and process bounds per platform, and running against the OpenTLV Core adapter.
 - [Schema compatibility](docs/compatibility.md): schema versions and how they relate to data, tooling and protocol versions.
 
 ## Checks
@@ -81,6 +83,12 @@ Resolve an execution plan against a release and an adapter, and check it before 
 ```sh
 python scripts/plan.py resolve --corpus build/release/opentlv-corpus-data-0.1.0.tar --plan examples/plans/smoke.json   --output build/resolved.json -- python tests/stub_adapter.py
 python scripts/plan.py check --corpus build/release/opentlv-corpus-data-0.1.0.tar --resolved build/resolved.json   -- python tests/stub_adapter.py
+```
+
+Run the resolved plan and record the observations:
+
+```sh
+python scripts/run.py --corpus build/release/opentlv-corpus-data-0.1.0.tar --resolved build/resolved.json   --output build/observations.jsonl -- python tests/stub_adapter.py
 ```
 
 ## License

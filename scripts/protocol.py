@@ -12,6 +12,12 @@ classifies the exchange. After a crash, a timeout or a protocol error it kills
 the process and starts a new one before the next request. It never invents a
 result for a request that has no valid answer.
 
+Every adapter process is contained with what the operating system offers: a
+process group and resource limits on POSIX systems, a job object on Windows.
+Killing the adapter kills everything it started, a native crash never waits
+in a crash dialog or writes a core dump, and an optional memory limit makes
+the adapter's allocations fail beyond it.
+
 docs/adapter-protocol.md specifies the protocol.
 """
 
@@ -26,6 +32,8 @@ import signal
 import subprocess
 import sys
 import threading
+import time
+from typing import Optional
 
 
 if not __package__:
@@ -59,16 +67,21 @@ class Limits:
     exit_timeout: float = 5.0
     max_message_octets: int = 4 * 1024 * 1024
     stderr_octets: int = 64 * 1024
+    # Octets of memory each adapter process may commit, or None for no limit; see Containment.
+    memory_octets: Optional[int] = None
 
 
-Exchange = namedtuple("Exchange", "id method status problem detail response stderr exit_status")
+Exchange = namedtuple("Exchange", "id method status problem detail response stderr exit_status answer duration",
+                      defaults=(None, None))
 Exchange.__doc__ = """One request and its classification.
 
 id is None when the harness decided without sending anything. problem is a
 stable code that refines the status, detail explains it, and response is the
 parsed answer when there is a valid one. stderr is what the adapter wrote to
 its standard error during the exchange, and exit_status the status of a
-process that ended or was killed.
+process that ended or was killed. answer is the raw line, without its line
+feed, of an answer that breaks the protocol, and duration the seconds from
+writing the request to classifying its answer.
 """
 
 
@@ -216,6 +229,129 @@ def classify(line, method, request_id, params=None):
     return "completed", None, "", message
 
 
+class _Job:
+    """A Windows job object that holds an adapter process and every process it starts.
+
+    Terminating or closing the job kills them all. The job keeps a crashing
+    process from waiting in a Windows Error Reporting dialog, and can limit
+    the memory each of its processes commits.
+    """
+
+    KILL_ON_JOB_CLOSE = 0x2000
+    DIE_ON_UNHANDLED_EXCEPTION = 0x400
+    PROCESS_MEMORY = 0x100
+    EXTENDED_LIMIT_INFORMATION = 9
+
+    def __init__(self, memory_octets):
+        import ctypes
+        from ctypes import wintypes
+
+        class Basic(ctypes.Structure):
+            _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64), ("PerJobUserTimeLimit", ctypes.c_int64),
+                        ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                        ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                        ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                        ("SchedulingClass", wintypes.DWORD)]
+
+        class Extended(ctypes.Structure):
+            _fields_ = [("BasicLimitInformation", Basic), ("IoInfo", ctypes.c_uint64 * 6),
+                        ("ProcessMemoryLimit", ctypes.c_size_t), ("JobMemoryLimit", ctypes.c_size_t),
+                        ("PeakProcessMemoryUsed", ctypes.c_size_t), ("PeakJobMemoryUsed", ctypes.c_size_t)]
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        kernel32.CreateJobObjectW.argtypes = (ctypes.c_void_p, wintypes.LPCWSTR)
+        kernel32.SetInformationJobObject.argtypes = (wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD)
+        kernel32.AssignProcessToJobObject.argtypes = (wintypes.HANDLE, wintypes.HANDLE)
+        kernel32.TerminateJobObject.argtypes = (wintypes.HANDLE, wintypes.UINT)
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        self._kernel32 = kernel32
+        self._error = lambda: ctypes.WinError(ctypes.get_last_error())
+        self.handle = kernel32.CreateJobObjectW(None, None)
+        if not self.handle:
+            raise self._error()
+        info = Extended()
+        info.BasicLimitInformation.LimitFlags = self.KILL_ON_JOB_CLOSE | self.DIE_ON_UNHANDLED_EXCEPTION
+        if memory_octets is not None:
+            info.BasicLimitInformation.LimitFlags |= self.PROCESS_MEMORY
+            info.ProcessMemoryLimit = memory_octets
+        if not kernel32.SetInformationJobObject(self.handle, self.EXTENDED_LIMIT_INFORMATION, ctypes.byref(info),
+                                                ctypes.sizeof(info)):
+            error = self._error()
+            self.close()
+            raise error
+
+    def assign(self, process):
+        if not self._kernel32.AssignProcessToJobObject(self.handle, int(process._handle)):
+            raise self._error()
+
+    def terminate(self):
+        if self.handle:
+            self._kernel32.TerminateJobObject(self.handle, 1)
+
+    def close(self):
+        if self.handle:
+            self._kernel32.CloseHandle(self.handle)
+            self.handle = None
+
+
+class Containment:
+    """How this platform contains adapter processes, and which bounds it enforces.
+
+    tree names what kills an adapter with every process it started:
+    process-group on POSIX systems, job-object on Windows. memory names what
+    enforces the memory limit: rlimit-as on POSIX systems, job-object on
+    Windows, unenforced on macOS, which accepts RLIMIT_AS but does not enforce
+    it, and none without a limit.
+    """
+
+    def __init__(self, memory_octets=None):
+        self.memory_octets = memory_octets
+        self.tree = "job-object" if os.name == "nt" else "process-group"
+        if memory_octets is None:
+            self.memory = "none"
+        elif os.name == "nt":
+            self.memory = "job-object"
+        else:
+            self.memory = "unenforced" if sys.platform == "darwin" else "rlimit-as"
+
+    def to_json(self):
+        document = {"tree": self.tree, "memory": self.memory}
+        if self.memory_octets is not None:
+            document["memory_octets"] = self.memory_octets
+        return document
+
+    def _limit(self):
+        # Runs in the child between fork and exec.
+        import resource
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+        if self.memory == "rlimit-as":
+            resource.setrlimit(resource.RLIMIT_AS, (self.memory_octets, self.memory_octets))
+
+    def popen(self, command, cwd=None, env=None):
+        """Start a command with its standard streams on pipes; return the process and its job, if any."""
+        streams = {"stdin": subprocess.PIPE, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
+        if os.name != "nt":
+            process = subprocess.Popen(command, cwd=cwd, env=env, start_new_session=True, preexec_fn=self._limit,
+                                       **streams)
+            return process, None
+        job = _Job(self.memory_octets)
+        try:
+            process = subprocess.Popen(command, cwd=cwd, env=env, **streams)
+        except BaseException:
+            job.close()
+            raise
+        try:
+            # A process the adapter starts before this assignment escapes the job.
+            job.assign(process)
+        except OSError:
+            process.kill()
+            process.wait()
+            job.close()
+            raise
+        return process, job
+
+
 class Channel:
     """An adapter process whose standard streams background threads drain.
 
@@ -223,10 +359,12 @@ class Channel:
     answer lines, the end of the output and write failures arrive as events.
     """
 
-    def __init__(self, command, max_line, stderr_octets, cwd=None, env=None):
-        options = {"start_new_session": True} if os.name == "posix" else {}
-        self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE, cwd=cwd, env=env, **options)
+    def __init__(self, command, max_line, stderr_octets, cwd=None, env=None, containment=None):
+        try:
+            self.process, self._job = (containment or Containment()).popen(command, cwd, env)
+        except subprocess.SubprocessError as error:
+            # A failure of the POSIX resource limits before exec.
+            raise OSError(str(error)) from error
         self.max_line = max_line
         self.stderr_octets = stderr_octets
         self.events = queue.Queue()
@@ -303,16 +441,20 @@ class Channel:
             return None
 
     def kill(self):
-        """Kill the adapter, with its process group where the platform has one, and return its exit status."""
+        """Kill the adapter with every process it started, and return its exit status."""
         # The group outlives an adapter that exited and left children behind.
         try:
             if os.name == "posix":
                 os.killpg(self.process.pid, signal.SIGKILL)
+            elif self._job is not None:
+                self._job.terminate()
             elif self.process.poll() is None:
                 self.process.kill()
         except (ProcessLookupError, PermissionError):
             pass
         status = self.process.wait()
+        if self._job is not None:
+            self._job.close()
         self.close_input()
         for thread in self._threads:
             thread.join(timeout=1.0)
@@ -327,6 +469,7 @@ class Session:
     def __init__(self, command, limits=Limits(), cwd=None, env=None):
         self.command = list(command)
         self.limits = limits
+        self.containment = Containment(limits.memory_octets)
         self.cwd = cwd
         self.env = env
         self.descriptor = None
@@ -357,7 +500,7 @@ class Session:
         self._discard()
         try:
             self._channel = Channel(self.command, self.limits.max_message_octets, self.limits.stderr_octets,
-                                    self.cwd, self.env)
+                                    self.cwd, self.env, self.containment)
         except OSError as error:
             exchange = Exchange(None, "hello", "harness-error", "spawn-failed", str(error), None, "", None)
             raise SessionError("start-failed", f"cannot start the adapter: {error}", exchange) from error
@@ -380,7 +523,8 @@ class Session:
         self.spawn()
         return self.hello()
 
-    def _restart(self, cause):
+    def restart(self, cause):
+        """Kill the adapter and start a new one with the handshake; raise SessionError unless it completes."""
         self.events.append(("restart", cause))
         self._discard()
         self.restarts += 1
@@ -399,14 +543,14 @@ class Session:
         if decision is not None:
             return Exchange(None, "execute", "unsupported", *decision, None, "", None)
         if self._channel is None:
-            self._restart("the previous exchange failed")
+            self.restart("the previous exchange failed")
         elif self._channel.pending():
             event, data = self._channel.next_event(0)
             if event == "line":
                 self.events.append(("unsolicited-output", repr(data[:80])))
             else:
                 self.events.append(("exited", "the adapter ended between requests"))
-            self._restart(f"{self.events[-1][0]} between requests")
+            self.restart(f"{self.events[-1][0]} between requests")
         message = request(self.next_id(), "execute", params)
         size = len(encode(message)) - 1
         limit = self.descriptor["limits"]["max_message_octets"]
@@ -423,12 +567,16 @@ class Session:
     def send_line(self, line, method, request_id, timeout, params=None):
         """Send one raw line, which ends with a line feed, and classify the answer as one to request_id."""
         channel = self._channel
+        started = time.monotonic()
         channel.write(line)
         event, data = channel.next_event(timeout)
-        response, exit_status = None, None
+        response, exit_status, answer = None, None, None
         if event == "line":
             status, problem, detail, response = classify(data, method, request_id, params)
+            if status == "protocol-error":
+                answer = data
         elif event == "too-large":
+            # The line itself is not kept: it is as long as the adapter cares to write.
             status, problem, detail = "protocol-error", "message-too-large", data
         elif event == "timeout":
             status, problem, detail = "timeout", None, f"no answer within {timeout:g} s"
@@ -441,7 +589,9 @@ class Session:
                                                                         and problem != "internal-error"):
             exit_status = channel.kill()
             self._channel = None
-        return Exchange(request_id, method, status, problem, detail, response, channel.take_stderr(), exit_status)
+        duration = time.monotonic() - started
+        return Exchange(request_id, method, status, problem, detail, response, channel.take_stderr(), exit_status,
+                        answer, duration)
 
     def close(self):
         """Close the adapter's input and return its exit status, killing it after the grace period."""
