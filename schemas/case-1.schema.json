@@ -1,0 +1,521 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opentlv:corpus:schema:case:1",
+  "title": "OpenTLV Corpus test case, schema version 1",
+  "description": "One test case: a normative definition (standard, input and independent expectations) and informative metadata (title, tags, oracle evidence, provenance). See docs/test-case-contract.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "normative", "informative"],
+  "properties": {
+    "schema": {"const": "urn:opentlv:corpus:schema:case:1"},
+    "id": {"$ref": "#/$defs/caseId"},
+    "normative": {"$ref": "#/$defs/normative"},
+    "informative": {"$ref": "#/$defs/informative"}
+  },
+  "$defs": {
+    "caseId": {
+      "description": "<family>.<rules>.<serial>; the serial is six decimal digits and never 000000.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{0,15}\\.[a-z][a-z0-9]{0,15}\\.(?!000000)[0-9]{6}$"
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "dottedKey": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*(\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*$",
+      "maxLength": 128
+    },
+    "hex": {
+      "description": "Byte string: lowercase hexadecimal, two digits per octet, no separators.",
+      "type": "string",
+      "pattern": "^([0-9a-f]{2})*$"
+    },
+    "unsigned": {
+      "description": "Arbitrary-precision non-negative integer as a decimal string.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$"
+    },
+    "signed": {
+      "description": "Arbitrary-precision integer as a decimal string.",
+      "type": "string",
+      "pattern": "^(0|-?[1-9][0-9]*)$"
+    },
+    "tagClass": {"enum": ["universal", "application", "context", "private"]},
+
+    "normative": {
+      "description": "Identity-bearing content. Any change to it changes the meaning of the case.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["standard", "input", "assertions"],
+      "properties": {
+        "standard": {"$ref": "#/$defs/standard"},
+        "type": {"$ref": "#/$defs/type"},
+        "input": {"$ref": "#/$defs/input"},
+        "assertions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/assertion"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {"required": ["input"], "properties": {"input": {"required": ["value"]}}},
+              {
+                "required": ["assertions"],
+                "properties": {
+                  "assertions": {
+                    "contains": {
+                      "required": ["request"],
+                      "properties": {"request": {"required": ["view"], "properties": {"view": {"const": "value"}}}}
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "then": {"required": ["type"]}
+        }
+      ]
+    },
+    "standard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "rules"],
+      "properties": {
+        "ref": {"$ref": "#/$defs/key", "description": "Standard edition registered in registry/registry.json."},
+        "rules": {"$ref": "#/$defs/key", "description": "Encoding rule set within that edition, for example ber, cer or der."}
+      }
+    },
+    "input": {
+      "description": "The single subject of every assertion: octets to decode, or a tree or typed value to encode.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "octets": {"$ref": "#/$defs/hex"},
+        "tree": {"$ref": "#/$defs/node"},
+        "value": {"$ref": "#/$defs/value"}
+      }
+    },
+
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "request", "clauses", "expect"],
+      "properties": {
+        "key": {"$ref": "#/$defs/key", "description": "Unique within the case; the check is identified as <id>/<key>."},
+        "request": {"$ref": "#/$defs/request"},
+        "clauses": {
+          "description": "Clauses of the referenced standard edition that the assertion checks.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(Annex [A-Z]|[0-9]+)(\\.[0-9]+)*( [a-z]\\))?$"
+          }
+        },
+        "requires": {
+          "description": "Capabilities registered in registry/registry.json that an implementation must declare for the assertion to apply.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/dottedKey"}
+        },
+        "expect": true
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"request": {"properties": {"operation": {"const": "decode"}}}}},
+          "then": {"properties": {"expect": {"$ref": "#/$defs/decodeExpectation"}}}
+        },
+        {
+          "if": {"properties": {"request": {"properties": {"operation": {"const": "encode"}}}}},
+          "then": {"properties": {"expect": {"$ref": "#/$defs/encodeExpectation"}}}
+        },
+        {
+          "if": {"properties": {"request": {"properties": {"operation": {"const": "round-trip"}}}}},
+          "then": {"properties": {"expect": {"$ref": "#/$defs/roundTripExpectation"}}}
+        }
+      ]
+    },
+    "request": {
+      "description": "Oracle-blind execution parameters. Together with the standard, type and input they are all an adapter may receive.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "strictness", "view"],
+      "properties": {
+        "operation": {"enum": ["decode", "encode", "round-trip"]},
+        "strictness": {"enum": ["strict", "lenient"]},
+        "view": {"enum": ["tree", "value"]}
+      }
+    },
+
+    "decodeExpectation": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["result"],
+          "properties": {"result": {"$ref": "#/$defs/decodeResult"}}
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["one_of", "basis"],
+          "properties": {
+            "one_of": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/decodeResult"}},
+            "basis": {"$ref": "#/$defs/basis"}
+          }
+        }
+      ]
+    },
+    "encodeExpectation": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["result"],
+          "properties": {"result": {"$ref": "#/$defs/encodeResult"}}
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["one_of", "basis"],
+          "properties": {
+            "one_of": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/encodeResult"}},
+            "basis": {"$ref": "#/$defs/basis"}
+          }
+        }
+      ]
+    },
+    "roundTripExpectation": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["result"],
+          "properties": {"result": {"$ref": "#/$defs/roundTripResult"}}
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["one_of", "basis"],
+          "properties": {
+            "one_of": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/roundTripResult"}},
+            "basis": {"$ref": "#/$defs/basis"}
+          }
+        }
+      ]
+    },
+    "basis": {
+      "description": "Why more than one result is correct: the standard permits each listed result, or leaves the choice to the implementation.",
+      "enum": ["permitted-alternatives", "implementation-defined"]
+    },
+    "decodeResult": {
+      "oneOf": [
+        {"$ref": "#/$defs/rejection"},
+        {
+          "type": "object", "additionalProperties": false, "required": ["outcome", "tree"],
+          "properties": {"outcome": {"const": "accept"}, "tree": {"$ref": "#/$defs/node"}}
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["outcome", "value"],
+          "properties": {"outcome": {"const": "accept"}, "value": {"$ref": "#/$defs/value"}}
+        }
+      ]
+    },
+    "encodeResult": {
+      "oneOf": [
+        {"$ref": "#/$defs/rejection"},
+        {
+          "type": "object", "additionalProperties": false, "required": ["outcome", "octets"],
+          "properties": {"outcome": {"const": "accept"}, "octets": {"$ref": "#/$defs/hex"}}
+        }
+      ]
+    },
+    "roundTripResult": {
+      "oneOf": [
+        {"$ref": "#/$defs/rejection"},
+        {
+          "type": "object", "additionalProperties": false, "required": ["outcome", "preserves"],
+          "properties": {"outcome": {"const": "accept"}, "preserves": {"enum": ["octets", "tree", "value"]}}
+        }
+      ]
+    },
+    "rejection": {
+      "type": "object", "additionalProperties": false, "required": ["outcome", "reason"],
+      "properties": {
+        "outcome": {"const": "reject"},
+        "reason": {"$ref": "#/$defs/dottedKey", "description": "Reason code registered in registry/registry.json; never a native error code."}
+      }
+    },
+
+    "node": {
+      "description": "Canonical TLV tree node. Primitive nodes carry contents octets, constructed nodes carry children.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "constructed", "number"],
+      "properties": {
+        "class": {"$ref": "#/$defs/tagClass"},
+        "constructed": {"type": "boolean"},
+        "number": {"$ref": "#/$defs/unsigned"},
+        "contents": {"$ref": "#/$defs/hex"},
+        "children": {"type": "array", "items": {"$ref": "#/$defs/node"}}
+      },
+      "if": {"properties": {"constructed": {"const": true}}},
+      "then": {"required": ["children"], "not": {"required": ["contents"]}},
+      "else": {"required": ["contents"], "not": {"required": ["children"]}}
+    },
+
+    "kind": {
+      "enum": [
+        "boolean", "integer", "enumerated", "null", "octet_string", "bit_string", "object_identifier",
+        "ia5_string", "utf8_string", "sequence", "set", "sequence_of", "set_of", "choice"
+      ]
+    },
+    "type": {
+      "description": "ASN.1 type the value view uses. Universal tags are implied by kind; tag overrides them.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"$ref": "#/$defs/kind"},
+        "tag": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["class", "number", "mode"],
+          "properties": {
+            "class": {"$ref": "#/$defs/tagClass"},
+            "number": {"$ref": "#/$defs/unsigned"},
+            "mode": {"enum": ["implicit", "explicit"]}
+          }
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "type"],
+            "properties": {
+              "name": {"$ref": "#/$defs/fieldName"},
+              "type": {"$ref": "#/$defs/type"},
+              "optional": {"const": true},
+              "default": {"$ref": "#/$defs/value"}
+            },
+            "not": {"required": ["optional", "default"]}
+          }
+        },
+        "item": {"$ref": "#/$defs/type"},
+        "alternatives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "type"],
+            "properties": {"name": {"$ref": "#/$defs/fieldName"}, "type": {"$ref": "#/$defs/type"}}
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"enum": ["sequence", "set"]}}},
+          "then": {"required": ["fields"], "not": {"anyOf": [{"required": ["item"]}, {"required": ["alternatives"]}]}}
+        },
+        {
+          "if": {"properties": {"kind": {"enum": ["sequence_of", "set_of"]}}},
+          "then": {"required": ["item"], "not": {"anyOf": [{"required": ["fields"]}, {"required": ["alternatives"]}]}}
+        },
+        {
+          "if": {"properties": {"kind": {"const": "choice"}}},
+          "then": {
+            "required": ["alternatives"],
+            "not": {"anyOf": [{"required": ["fields"]}, {"required": ["item"]}, {"required": ["tag"], "properties": {"tag": {"properties": {"mode": {"const": "implicit"}}}}}]}
+          }
+        },
+        {
+          "if": {"properties": {"kind": {"not": {"enum": ["sequence", "set", "sequence_of", "set_of", "choice"]}}}},
+          "then": {"not": {"anyOf": [{"required": ["fields"]}, {"required": ["item"]}, {"required": ["alternatives"]}]}}
+        }
+      ]
+    },
+    "fieldName": {
+      "type": "string",
+      "pattern": "^[a-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "value": {
+      "description": "Canonical typed value. Integers are decimal strings and byte strings lowercase hex.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": {"kind": {"$ref": "#/$defs/kind"}},
+      "oneOf": [
+        {
+          "additionalProperties": false, "required": ["kind", "value"],
+          "properties": {"kind": {"const": "boolean"}, "value": {"type": "boolean"}}
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "value"],
+          "properties": {"kind": {"enum": ["integer", "enumerated"]}, "value": {"$ref": "#/$defs/signed"}}
+        },
+        {
+          "additionalProperties": false, "required": ["kind"],
+          "properties": {"kind": {"const": "null"}}
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "hex"],
+          "properties": {"kind": {"const": "octet_string"}, "hex": {"$ref": "#/$defs/hex"}}
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "hex", "unused_bits"],
+          "properties": {
+            "kind": {"const": "bit_string"},
+            "hex": {"$ref": "#/$defs/hex"},
+            "unused_bits": {"type": "integer", "minimum": 0, "maximum": 7}
+          },
+          "if": {"properties": {"hex": {"const": ""}}},
+          "then": {"properties": {"unused_bits": {"const": 0}}}
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "value"],
+          "properties": {
+            "kind": {"const": "object_identifier"},
+            "value": {"type": "string", "pattern": "^[0-2](\\.(0|[1-9][0-9]*))+$"}
+          }
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "value"],
+          "properties": {"kind": {"enum": ["ia5_string", "utf8_string"]}, "value": {"type": "string"}}
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "fields"],
+          "properties": {
+            "kind": {"enum": ["sequence", "set"]},
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "value"],
+                "properties": {"name": {"$ref": "#/$defs/fieldName"}, "value": {"$ref": "#/$defs/value"}}
+              }
+            }
+          }
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "items"],
+          "properties": {
+            "kind": {"enum": ["sequence_of", "set_of"]},
+            "items": {"type": "array", "items": {"$ref": "#/$defs/value"}}
+          }
+        },
+        {
+          "additionalProperties": false, "required": ["kind", "alternative", "value"],
+          "properties": {
+            "kind": {"const": "choice"},
+            "alternative": {"$ref": "#/$defs/fieldName"},
+            "value": {"$ref": "#/$defs/value"}
+          }
+        }
+      ]
+    },
+
+    "informative": {
+      "description": "Editable metadata. Changing it never changes the meaning of the case.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "tags", "oracle", "provenance"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1, "maxLength": 120},
+        "description": {"type": "string", "minLength": 1},
+        "tags": {
+          "description": "Fine-grained taxonomy such as length, boundary or malformed; selection uses tags, never ID prefixes.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/key"}
+        },
+        "related": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/caseId"}
+        },
+        "oracle": {"$ref": "#/$defs/oracle"},
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    },
+    "oracle": {
+      "description": "Evidence for the expectations. Agreement between implementations is recorded only as corroboration and is never a source.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "rationale", "review"],
+      "properties": {
+        "source": {"enum": ["specification", "published-vector", "operation-contract"]},
+        "rationale": {"type": "string", "minLength": 1, "description": "How each expectation follows from the cited clauses, vector or operation contract."},
+        "vectors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["publisher", "name", "url", "license"],
+            "properties": {
+              "publisher": {"type": "string", "minLength": 1},
+              "name": {"type": "string", "minLength": 1},
+              "url": {"type": "string", "pattern": "^https://"},
+              "revision": {"type": "string", "minLength": 1},
+              "license": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "corroboration": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["implementation", "version", "agrees"],
+            "properties": {
+              "implementation": {"type": "string", "minLength": 1},
+              "version": {"type": "string", "minLength": 1},
+              "agrees": {"type": "boolean"},
+              "note": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reviewers", "date"],
+          "properties": {
+            "status": {"enum": ["self-reviewed", "peer-reviewed"]},
+            "reviewers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+            "date": {"type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"}
+          }
+        }
+      },
+      "allOf": [
+        {"if": {"properties": {"source": {"const": "published-vector"}}}, "then": {"required": ["vectors"]}, "else": {"not": {"required": ["vectors"]}}}
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin", "authors", "license"],
+      "properties": {
+        "origin": {"enum": ["authored", "migrated", "imported"]},
+        "authors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "license": {"type": "string", "minLength": 1, "description": "SPDX license expression covering the case data."},
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "revision", "path"],
+          "properties": {
+            "repository": {"type": "string", "pattern": "^https://"},
+            "revision": {"type": "string", "minLength": 1},
+            "path": {"type": "string", "minLength": 1},
+            "id": {"type": "string", "minLength": 1}
+          }
+        }
+      },
+      "if": {"properties": {"origin": {"enum": ["migrated", "imported"]}}},
+      "then": {"required": ["source"]}
+    }
+  }
+}

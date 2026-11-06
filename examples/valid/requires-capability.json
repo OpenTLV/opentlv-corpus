@@ -1,0 +1,67 @@
+{
+  "schema": "urn:opentlv:corpus:schema:case:1",
+  "id": "example.ber.000001",
+  "normative": {
+    "standard": {
+      "ref": "itu-t-x690-2021-02",
+      "rules": "ber"
+    },
+    "input": {
+      "octets": "9f888080800000"
+    },
+    "assertions": [
+      {
+        "key": "decode",
+        "request": {
+          "operation": "decode",
+          "strictness": "strict",
+          "view": "tree"
+        },
+        "clauses": [
+          "8.1.2.4.1",
+          "8.1.2.4.2"
+        ],
+        "requires": [
+          "tag-number.over-31-bits"
+        ],
+        "expect": {
+          "result": {
+            "outcome": "accept",
+            "tree": {
+              "class": "context",
+              "constructed": false,
+              "number": "2147483648",
+              "contents": ""
+            }
+          }
+        }
+      }
+    ]
+  },
+  "informative": {
+    "title": "BER high tag number 2^31 needs five subsequent octets",
+    "tags": [
+      "identifier",
+      "high-tag-number",
+      "boundary"
+    ],
+    "oracle": {
+      "source": "specification",
+      "rationale": "9F is context-specific and primitive with bits 5 to 1 all one (8.1.2.4.1). 88 80 80 80 00 holds the base-128 digits 8, 0, 0, 0, 0 of 2^31 = 8 * 128^4, with bit 8 set on every octet but the last and a non-zero first octet (8.1.2.4.2). The final 00 is a zero length.",
+      "review": {
+        "status": "self-reviewed",
+        "reviewers": [
+          "Marek Cingel"
+        ],
+        "date": "2026-11-06"
+      }
+    },
+    "provenance": {
+      "origin": "authored",
+      "authors": [
+        "Marek Cingel"
+      ],
+      "license": "MIT"
+    }
+  }
+}

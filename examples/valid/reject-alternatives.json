@@ -1,0 +1,70 @@
+{
+  "schema": "urn:opentlv:corpus:schema:case:1",
+  "id": "example.der.000005",
+  "normative": {
+    "standard": {
+      "ref": "itu-t-x690-2021-02",
+      "rules": "der"
+    },
+    "input": {
+      "octets": "048105aa"
+    },
+    "assertions": [
+      {
+        "key": "decode",
+        "request": {
+          "operation": "decode",
+          "strictness": "strict",
+          "view": "tree"
+        },
+        "clauses": [
+          "8.1.3.5",
+          "10.1"
+        ],
+        "expect": {
+          "one_of": [
+            {
+              "outcome": "reject",
+              "reason": "length.non-minimal"
+            },
+            {
+              "outcome": "reject",
+              "reason": "input.truncated"
+            }
+          ],
+          "basis": "permitted-alternatives"
+        }
+      }
+    ]
+  },
+  "informative": {
+    "title": "DER input with two violations may be rejected for either",
+    "tags": [
+      "length",
+      "non-minimal",
+      "truncated",
+      "malformed"
+    ],
+    "related": [
+      "example.der.000004"
+    ],
+    "oracle": {
+      "source": "specification",
+      "rationale": "81 05 is a non-minimal length (10.1) that announces five contents octets where only one follows (8.1.3.5). Both violations are present, so reporting either one is a correct rejection.",
+      "review": {
+        "status": "self-reviewed",
+        "reviewers": [
+          "Marek Cingel"
+        ],
+        "date": "2026-11-06"
+      }
+    },
+    "provenance": {
+      "origin": "authored",
+      "authors": [
+        "Marek Cingel"
+      ],
+      "license": "MIT"
+    }
+  }
+}
