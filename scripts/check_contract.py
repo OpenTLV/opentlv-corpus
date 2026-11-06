@@ -15,12 +15,15 @@ Run it to check the committed registry and the schema examples.
 import argparse
 import copy
 import functools
-import json
 from pathlib import Path
 import re
 import sys
 
 from jsonschema import Draft202012Validator, ValidationError, validators
+
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.canonical import load_json  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "schemas"
@@ -30,11 +33,6 @@ EXAMPLES = ROOT / "examples"
 EXAMPLE_FAMILY = "example"
 EXPECTATION_KEYS = frozenset({"expect", "expected", "expectation", "result", "one_of", "basis",
                               "outcome", "reason", "oracle", "verdict", "informative"})
-
-
-def load_json(path):
-    with open(path, encoding="utf-8") as stream:
-        return json.load(stream)
 
 
 CASE_ID = re.compile(load_json(SCHEMAS / "case-1.schema.json")["$defs"]["caseId"]["pattern"])

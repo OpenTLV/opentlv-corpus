@@ -1,0 +1,265 @@
+{
+  "description": "Canonicalization vectors (RFC 8785) and canonical definition digests of the example cases, with metadata edits that keep the digest and normative edits that change it. See docs/digest.md.",
+  "canonicalization": [
+    {
+      "name": "rfc8785-member-order",
+      "input": {
+        "\u20ac": "Euro Sign",
+        "\r": "Carriage Return",
+        "\ufb33": "Hebrew Letter Dalet With Dagesh",
+        "1": "One",
+        "\ud83d\ude00": "Emoji: Grinning Face",
+        "\u0080": "Control",
+        "\u00f6": "Latin Small Letter O With Diaeresis"
+      },
+      "canonical": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\u0080\":\"Control\",\"\u00f6\":\"Latin Small Letter O With Diaeresis\",\"\u20ac\":\"Euro Sign\",\"\ud83d\ude00\":\"Emoji: Grinning Face\",\"\ufb33\":\"Hebrew Letter Dalet With Dagesh\"}",
+      "sha256": "5e321556d22018a9656991a9e94f77ec175fa193e52a2429d312f8419ec8b08c"
+    },
+    {
+      "name": "rfc8785-string-escapes",
+      "input": "\u20ac$\u000f\nA'B\"\\\\\"/",
+      "canonical": "\"\u20ac$\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"",
+      "sha256": "48caa679d7f31885aac4a400aa52732f9b304c1a417dfa6e75631e81ca2f785c"
+    },
+    {
+      "name": "control-characters",
+      "input": "\u0000\b\t\n\f\r\u001f\u007f",
+      "canonical": "\"\\u0000\\b\\t\\n\\f\\r\\u001f\u007f\"",
+      "sha256": "e55e5b9e46a35d4d2a0431e465fb8773727a6e0e4b7a9e8cf30d997a6efc7d04"
+    },
+    {
+      "name": "literals-and-nesting",
+      "input": {
+        "b": [
+          true,
+          false,
+          null,
+          {
+            "y": [],
+            "x": {}
+          }
+        ],
+        "a": "",
+        "A": "upper case sorts first"
+      },
+      "canonical": "{\"A\":\"upper case sorts first\",\"a\":\"\",\"b\":[true,false,null,{\"x\":{},\"y\":[]}]}",
+      "sha256": "237a5d5de27d1d683004e498775f3ce23343e3f8b787bae69bc3b0c9f3d2158f"
+    },
+    {
+      "name": "integer-limits",
+      "input": [
+        9007199254740991,
+        -9007199254740991,
+        0,
+        7
+      ],
+      "canonical": "[9007199254740991,-9007199254740991,0,7]",
+      "sha256": "007026d3625b4797b7bcbf9cbe87db42084e6cef4dabf0babcfd2ffb90f724c4"
+    },
+    {
+      "name": "integer-above-limit",
+      "input": 9007199254740992,
+      "rejected": true
+    },
+    {
+      "name": "floating-point",
+      "input": 1.5,
+      "rejected": true
+    },
+    {
+      "name": "lone-surrogate",
+      "input": "\ud800",
+      "rejected": true
+    }
+  ],
+  "cases": {
+    "decode-tree.json": "sha256:b4739538d50f8646aaa4af52e9f34543febba63189e821f9ea79f0afa2041449",
+    "decode-value.json": "sha256:1953e4f439abd653231c2d2108343683f542dcff34e2d25cbbfc15755a1acbcf",
+    "deprecated-duplicate.json": "sha256:1a9fce60bc0c456cb99b038d01b5ab7d11bbc54a7d7eda0246fc561198f7db59",
+    "encode-tree.json": "sha256:a33015c08b10dcf4edad7aea67bc199eb3a286b2214963f0dcb48966ddd4ef7f",
+    "encode-value.json": "sha256:af638abef3af0d6c65700c7c3193ba28477844e7a341345df92f11374cb0e07c",
+    "invalidated-expectation.json": "sha256:ebe77355bbe8461b4383d66fb4a842495fd56a747bd0fa143ce72dc6dc0f3e9d",
+    "reject-alternatives.json": "sha256:f69a0d37a2d3574aee2b3b82e7f9f3b82b246e87c74a07f0891f7baae0f4a1e0",
+    "reject-strictness.json": "sha256:689cd7ae7460e2de90bb6d7a4e397525a02c8b4f4686f25f3c4c654947609565",
+    "replacement.json": "sha256:3989bc1e7142f792b2d3a8db85ebc2a36a45209f536accf47b700f6e6395b04d",
+    "requires-capability.json": "sha256:45abb8796f5d47856084e48f4633e77680079ccec9028070921d7e6c5e16fbdc",
+    "round-trip-property.json": "sha256:552c5c6435ec1c27cfb80aba9654e10ddbf6f8b6f97f23570a5500fa29a44b95"
+  },
+  "edits": [
+    {
+      "name": "retitle",
+      "base": "decode-tree.json",
+      "effect": "unchanged",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/informative/title",
+          "value": "DER BOOLEAN TRUE"
+        }
+      ],
+      "digest": "sha256:b4739538d50f8646aaa4af52e9f34543febba63189e821f9ea79f0afa2041449"
+    },
+    {
+      "name": "retag",
+      "base": "decode-tree.json",
+      "effect": "unchanged",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/informative/tags",
+          "value": [
+            "boolean"
+          ]
+        }
+      ],
+      "digest": "sha256:b4739538d50f8646aaa4af52e9f34543febba63189e821f9ea79f0afa2041449"
+    },
+    {
+      "name": "describe",
+      "base": "decode-tree.json",
+      "effect": "unchanged",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/informative/description",
+          "value": "One primitive node."
+        }
+      ],
+      "digest": "sha256:b4739538d50f8646aaa4af52e9f34543febba63189e821f9ea79f0afa2041449"
+    },
+    {
+      "name": "peer-review",
+      "base": "decode-tree.json",
+      "effect": "unchanged",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/informative/oracle/review",
+          "value": {
+            "status": "peer-reviewed",
+            "reviewers": [
+              "Marek Cingel",
+              "Another Reviewer"
+            ],
+            "date": "2026-11-07"
+          }
+        }
+      ],
+      "digest": "sha256:b4739538d50f8646aaa4af52e9f34543febba63189e821f9ea79f0afa2041449"
+    },
+    {
+      "name": "member-order",
+      "base": "decode-tree.json",
+      "effect": "unchanged",
+      "mutations": [
+        {
+          "op": "remove",
+          "path": "/normative/standard"
+        },
+        {
+          "op": "add",
+          "path": "/normative/standard",
+          "value": {
+            "ref": "itu-t-x690-2021-02",
+            "rules": "der"
+          }
+        }
+      ],
+      "digest": "sha256:b4739538d50f8646aaa4af52e9f34543febba63189e821f9ea79f0afa2041449"
+    },
+    {
+      "name": "expectation",
+      "base": "decode-tree.json",
+      "effect": "changed",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/normative/assertions/0/expect/result/tree/contents",
+          "value": "01"
+        }
+      ],
+      "digest": "sha256:70973dafec7f74b94bc2c8d0d6640c6d08d3a76f4b025a5a27cea5bf7f1f1946"
+    },
+    {
+      "name": "clause",
+      "base": "decode-tree.json",
+      "effect": "changed",
+      "mutations": [
+        {
+          "op": "add",
+          "path": "/normative/assertions/0/clauses/-",
+          "value": "8.1.1"
+        }
+      ],
+      "digest": "sha256:209d46b9383cca3907bd9a3262be75e0774f21d3fe92aa9bf5603471b3887fb9"
+    },
+    {
+      "name": "assertion-order",
+      "base": "decode-tree.json",
+      "effect": "changed",
+      "mutations": [
+        {
+          "op": "remove",
+          "path": "/normative/assertions/0"
+        },
+        {
+          "op": "add",
+          "path": "/normative/assertions/-",
+          "value": {
+            "key": "decode",
+            "request": {
+              "operation": "decode",
+              "strictness": "strict",
+              "view": "tree"
+            },
+            "clauses": [
+              "8.1.2.3",
+              "8.1.2.5",
+              "8.1.3.4",
+              "8.2.1",
+              "11.1"
+            ],
+            "expect": {
+              "result": {
+                "outcome": "accept",
+                "tree": {
+                  "class": "universal",
+                  "constructed": false,
+                  "number": "1",
+                  "contents": "ff"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "digest": "sha256:4f1d8dc9dec162b32ccbd7a4c0f518f9b1df195c788c96c3a84efda554f49def"
+    },
+    {
+      "name": "id",
+      "base": "decode-tree.json",
+      "effect": "changed",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/id",
+          "value": "example.der.000009"
+        }
+      ],
+      "digest": "sha256:9a6316a4edaebe22c328efcffb9989b5f236c020bbce889e899aff5a6b9019a7"
+    },
+    {
+      "name": "schema",
+      "base": "decode-tree.json",
+      "effect": "changed",
+      "mutations": [
+        {
+          "op": "replace",
+          "path": "/schema",
+          "value": "urn:opentlv:corpus:schema:case:2"
+        }
+      ],
+      "digest": "sha256:0ce6ed31370fc26295ed96dccd8c09b39f152e35c7fa124fd651f1bd32929ea1"
+    }
+  ]
+}

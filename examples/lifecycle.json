@@ -1,0 +1,44 @@
+{
+  "schema": "urn:opentlv:corpus:schema:lifecycle:1",
+  "phase": "0.x",
+  "events": [
+    {
+      "seq": 1,
+      "case": "example.der.000009",
+      "digest": "sha256:1a9fce60bc0c456cb99b038d01b5ab7d11bbc54a7d7eda0246fc561198f7db59",
+      "event": "deprecate",
+      "reason": {
+        "code": "duplicate",
+        "detail": "The decode assertion repeats example.der.000001 exactly; one case per assertion keeps report counts honest."
+      },
+      "replacement": "example.der.000001",
+      "actor": "Marek Cingel",
+      "review": {
+        "status": "self-reviewed",
+        "reviewers": [
+          "Marek Cingel"
+        ],
+        "date": "2026-11-06"
+      }
+    },
+    {
+      "seq": 2,
+      "case": "example.der.000007",
+      "digest": "sha256:ebe77355bbe8461b4383d66fb4a842495fd56a747bd0fa143ce72dc6dc0f3e9d",
+      "event": "invalidate",
+      "reason": {
+        "code": "expectation-wrong",
+        "detail": "The expectation applies the BER rule 8.2.2; DER also requires the contents octet FF (11.1), so a strict DER decoder must reject 01 01 01."
+      },
+      "replacement": "example.der.000008",
+      "actor": "Marek Cingel",
+      "review": {
+        "status": "self-reviewed",
+        "reviewers": [
+          "Marek Cingel"
+        ],
+        "date": "2026-11-06"
+      }
+    }
+  ]
+}

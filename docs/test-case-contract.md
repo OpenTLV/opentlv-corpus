@@ -41,7 +41,7 @@ This page specifies schema version 1, defined in [`schemas/case-1.schema.json`](
 | `normative` | Normative | `standard`, `type`, `input`, `assertions` with their requests, clauses, required capabilities and expectations |
 | `informative` | Informative | `title`, `description`, `tags`, `related`, `oracle`, `provenance` |
 
-Everything under `normative` defines what the case means and is the content the canonical definition digest covers.
+Everything under `normative` defines what the case means and is the content the [canonical definition digest](digest.md) covers.
 Changing it is governed by the [change policy](identity.md#immutability-and-change-policy).
 Everything under `informative` may be edited without changing the meaning.
 No field appears in both, and the schema rejects unknown fields anywhere, so an expectation can never hide in metadata.

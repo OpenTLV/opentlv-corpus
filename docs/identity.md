@@ -60,6 +60,7 @@ A serial that only existed on an unmerged branch was never allocated.
 
 `scripts/check_contract.py` implements the rules that do not depend on history: grammar, registered namespace, `serial <= allocated`, matching rules and standard, and unique IDs.
 `check_registry_transition(old, new)` checks a registry change against the previous revision or the last release: no namespace, standard edition, reason code or capability removed, no repurposed namespace, no lower allocation and no reopened or growing closed namespace.
+`scripts/check_history.py` runs it in CI against the base of each change.
 
 ## Immutability and change policy
 
@@ -71,19 +72,24 @@ Each case separates `normative` content, which defines what the case means, from
 The normative content of an ID is permanent.
 
 - Any change to the input, standard, type, an assertion, its clauses or an expectation requires a new ID.
-- The old case is not edited. It is deprecated, or invalidated when its expectation turns out to be wrong.
-  The lifecycle log, with its reason, review and optional replacement ID, is specified separately.
+- The old case is not edited. It is deprecated, or invalidated when its expectation turns out to be wrong, by an event in the [lifecycle log](lifecycle.md) with its reason, review and optional replacement ID.
 - Results recorded against an invalidated case are marked as affected; historical reports are never rewritten.
 - Informative metadata, such as titles, tags, oracle rationale, review status and provenance details, may still change.
+- The only in-place change is a schema migration that preserves the meaning, recorded as a `representation` revision.
 
 ### During 0.x
 
 The corpus is still settling, so a normative change in place is allowed only under these conditions:
 
 1. It is made in a reviewed pull request whose description lists each changed ID and the reason.
-2. The CHANGELOG entry names the changed IDs.
-3. The case keeps its subject. Correcting a wrong expectation, clause, type or mistyped input octet is allowed; repurposing the ID to test another rule or another input is not, and takes a new ID even during 0.x.
-4. Serials are never reused; the allocation rules above apply from the first merge.
+2. The same pull request appends a `revise` event for each changed case to the [lifecycle log](lifecycle.md#revise), naming the digests before and after the change.
+   Results recorded against the previous definition are then marked as affected.
+3. The CHANGELOG entry names the changed IDs.
+4. The case keeps its subject. Correcting a wrong expectation, clause, type or mistyped input octet is allowed; repurposing the ID to test another rule or another input is not, and takes a new ID even during 0.x.
+5. Serials are never reused; the allocation rules above apply from the first merge.
+
+A case file is never deleted, in 0.x or later.
+`scripts/check_history.py` enforces the revise events and the deletion rule against the base revision.
 
 Published release snapshots are never modified.
 A consumer pinned to a 0.x release digest therefore always sees the same definitions, even after an in-place change on the default branch.
