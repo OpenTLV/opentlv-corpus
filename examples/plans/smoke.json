@@ -1,0 +1,6 @@
+{
+  "schema": "urn:opentlv:corpus:schema:plan:1",
+  "name": "smoke",
+  "description": "The shared smoke suite of the registry, for pull request checks.",
+  "select": {"suite": "smoke"}
+}

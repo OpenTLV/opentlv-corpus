@@ -59,7 +59,7 @@ A serial counts as allocated once it reaches the default branch.
 A serial that only existed on an unmerged branch was never allocated.
 
 `scripts/check_contract.py` implements the rules that do not depend on history: grammar, registered namespace, `serial <= allocated`, matching rules and standard, and unique IDs.
-`check_registry_transition(old, new)` checks a registry change against the previous revision or the last release: no namespace, standard edition, reason code, capability or license removed, no repurposed namespace, no lower allocation and no reopened or growing closed namespace.
+`check_registry_transition(old, new)` checks a registry change against the previous revision or the last release: no namespace, standard edition, reason code, capability, license or suite removed, no repurposed namespace, no lower allocation and no reopened or growing closed namespace.
 `scripts/check_history.py` runs it in CI against the base of each change.
 
 ## Immutability and change policy
@@ -94,9 +94,9 @@ A case file is never deleted, in 0.x or later.
 Published release snapshots are never modified.
 A consumer pinned to a 0.x release digest therefore always sees the same definitions, even after an in-place change on the default branch.
 
-## Reasons, capabilities and licenses
+## Reasons, capabilities, licenses and suites
 
-The registry also holds three vocabularies that cases reference by key:
+The registry also holds four vocabularies that cases and plans reference by key:
 
 - `reasons`: the expected-rejection taxonomy, such as `length.non-minimal`.
   A dotted code refines its parent, which must exist.
@@ -105,5 +105,7 @@ The registry also holds three vocabularies that cases reference by key:
   They are never removed.
 - `licenses`: SPDX license identifiers, with name and URL, whose terms permit redistributing case data in a [data release](release.md).
   Every license a case names must be registered, and licenses are never removed.
+- `suites`: named selections that [execution plans](execution-plan.md#suites) share, such as `smoke`.
+  A suite's selection may change; suites are never removed.
 
-Adding a reason, capability or license is a data change, not a schema change.
+Adding a reason, capability, license or suite is a data change, not a schema change.

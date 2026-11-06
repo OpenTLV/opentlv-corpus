@@ -1,0 +1,6 @@
+{
+  "schema": "urn:opentlv:corpus:schema:plan:1",
+  "name": "full",
+  "description": "Every check of every active case. Checks the adapter does not support stay in the resolved plan as unsupported.",
+  "select": {}
+}

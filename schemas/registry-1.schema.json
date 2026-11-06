@@ -2,17 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:opentlv:corpus:schema:registry:1",
   "title": "OpenTLV Corpus registry, schema version 1",
-  "description": "Registered standard editions, ID namespaces with their serial allocation, expected-reason taxonomy, capability vocabulary and the licenses case data may use. See docs/identity.md.",
+  "description": "Registered standard editions, ID namespaces with their serial allocation, expected-reason taxonomy, capability vocabulary, the licenses case data may use and the named suites execution plans select. See docs/identity.md.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "standards", "namespaces", "reasons", "capabilities", "licenses"],
+  "required": ["schema", "standards", "namespaces", "reasons", "capabilities", "licenses", "suites"],
   "properties": {
     "schema": {"const": "urn:opentlv:corpus:schema:registry:1"},
     "standards": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/standard"}},
     "namespaces": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/namespace"}},
     "reasons": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/reason"}},
     "capabilities": {"type": "array", "items": {"$ref": "#/$defs/capability"}},
-    "licenses": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/license"}}
+    "licenses": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/license"}},
+    "suites": {"type": "array", "items": {"$ref": "#/$defs/suite"}}
   },
   "$defs": {
     "key": {
@@ -89,6 +90,49 @@
         "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$", "maxLength": 64, "description": "SPDX license identifier."},
         "name": {"$ref": "#/$defs/text"},
         "url": {"type": "string", "pattern": "^https://"}
+      }
+    },
+    "suite": {
+      "description": "A named selection that execution plans share, such as smoke.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "select"],
+      "properties": {
+        "id": {"$ref": "#/$defs/key"},
+        "title": {"$ref": "#/$defs/text"},
+        "select": {"$ref": "#/$defs/selection", "unevaluatedProperties": false}
+      }
+    },
+    "keys": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/key"}},
+    "selection": {
+      "description": "Conditions a check must meet to be selected. Every present member must hold; a list holds when the check matches one of its items. The plan and registry schemas hold identical copies.",
+      "type": "object",
+      "properties": {
+        "cases": {
+          "description": "Only these cases (<id>) or checks (<id>/<key>). Each one named must be selected by the other conditions.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]{0,15}\\.[a-z][a-z0-9]{0,15}\\.(?!000000)[0-9]{6}(/[a-z][a-z0-9]*(-[a-z0-9]+)*)?$",
+            "maxLength": 100
+          }
+        },
+        "standards": {"$ref": "#/$defs/keys", "description": "Registered standard editions."},
+        "rules": {"$ref": "#/$defs/keys", "description": "Encoding rule sets, such as der."},
+        "operations": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["decode", "encode", "round-trip"]}},
+        "strictness": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["strict", "lenient"]}},
+        "views": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["tree", "value"]}},
+        "tags": {"$ref": "#/$defs/keys", "description": "The case has at least one of these tags."},
+        "exclude_tags": {"$ref": "#/$defs/keys", "description": "The case has none of these tags."},
+        "lifecycle": {
+          "description": "Lifecycle statuses to select; active only when absent. Invalid cases are never selected.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["active", "deprecated"]}
+        }
       }
     }
   }

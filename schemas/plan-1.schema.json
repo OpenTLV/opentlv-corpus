@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opentlv:corpus:schema:plan:1",
+  "title": "OpenTLV Corpus execution plan, schema version 1",
+  "description": "Declarative selection of the checks to run against one adapter, with an optional corpus pin and harness limits. Selection uses only case definitions, metadata and lifecycle status, never results, and the corpus oracle is always the verdict reference. See docs/execution-plan.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "name", "select"],
+  "properties": {
+    "schema": {"const": "urn:opentlv:corpus:schema:plan:1"},
+    "name": {"$ref": "#/$defs/key"},
+    "description": {"type": "string", "minLength": 1},
+    "corpus": {
+      "description": "The data release the plan must be resolved against: its version and the SHA-256 of its archive.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release", "sha256"],
+      "properties": {
+        "release": {"$ref": "#/$defs/version"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "select": {
+      "$ref": "#/$defs/selection",
+      "properties": {
+        "suite": {"$ref": "#/$defs/key", "description": "A suite registered in registry/registry.json whose selection applies as well."}
+      },
+      "unevaluatedProperties": false
+    },
+    "limits": {
+      "description": "Harness limits; an absent limit has the protocol default.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hello_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+        "execute_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+        "exit_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+        "max_message_octets": {"type": "integer", "minimum": 4096, "maximum": 2147483647},
+        "stderr_octets": {"type": "integer", "minimum": 0, "maximum": 2147483647}
+      }
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "version": {
+      "description": "Semantic Versioning 2.0.0 version without build metadata.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?$",
+      "maxLength": 64
+    },
+    "milliseconds": {"type": "integer", "minimum": 1, "maximum": 86400000},
+    "keys": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/key"}},
+    "selection": {
+      "description": "Conditions a check must meet to be selected. Every present member must hold; a list holds when the check matches one of its items. The plan and registry schemas hold identical copies.",
+      "type": "object",
+      "properties": {
+        "cases": {
+          "description": "Only these cases (<id>) or checks (<id>/<key>). Each one named must be selected by the other conditions.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]{0,15}\\.[a-z][a-z0-9]{0,15}\\.(?!000000)[0-9]{6}(/[a-z][a-z0-9]*(-[a-z0-9]+)*)?$",
+            "maxLength": 100
+          }
+        },
+        "standards": {"$ref": "#/$defs/keys", "description": "Registered standard editions."},
+        "rules": {"$ref": "#/$defs/keys", "description": "Encoding rule sets, such as der."},
+        "operations": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["decode", "encode", "round-trip"]}},
+        "strictness": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["strict", "lenient"]}},
+        "views": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["tree", "value"]}},
+        "tags": {"$ref": "#/$defs/keys", "description": "The case has at least one of these tags."},
+        "exclude_tags": {"$ref": "#/$defs/keys", "description": "The case has none of these tags."},
+        "lifecycle": {
+          "description": "Lifecycle statuses to select; active only when absent. Invalid cases are never selected.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["active", "deprecated"]}
+        }
+      }
+    }
+  }
+}

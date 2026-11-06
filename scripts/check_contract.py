@@ -7,9 +7,9 @@ JSON Schema covers structure. This module adds the rules a schema cannot
 express: registry consistency, ID allocation, registry transitions that would
 reuse or repurpose an identity, input and view compatibility, value and type
 conformity, review independence and registered licenses. It also defines the oracle-blind view,
-the only part of a case an adapter may ever receive.
+the only part of a case an adapter may ever receive, and which checks a plan or suite selection selects.
 
-Run it to check the committed registry and the schema examples.
+Run it to check the committed registry, the schema examples and the example plans.
 """
 
 import argparse
@@ -31,6 +31,8 @@ REGISTRY = ROOT / "registry" / "registry.json"
 EXAMPLES = ROOT / "examples"
 
 EXAMPLE_FAMILY = "example"
+# Lifecycle statuses a selection selects when it names none.
+DEFAULT_LIFECYCLE = ("active",)
 EXPECTATION_KEYS = frozenset({"expect", "expected", "expectation", "result", "one_of", "basis",
                               "outcome", "reason", "oracle", "verdict", "informative"})
 
@@ -132,7 +134,7 @@ def check_registry(registry):
     """Return (code, detail) problems inside one registry document."""
     problems = []
     for section, key in (("standards", "id"), ("namespaces", "id"), ("reasons", "code"), ("capabilities", "id"),
-                         ("licenses", "id")):
+                         ("licenses", "id"), ("suites", "id")):
         for value in _duplicates(item[key] for item in registry[section]):
             problems.append(("registry-duplicate", f"{section}: {value}"))
     standards = _index(registry["standards"], "id")
@@ -149,7 +151,45 @@ def check_registry(registry):
     for code in sorted(codes):
         if "." in code and code.rsplit(".", 1)[0] not in codes:
             problems.append(("reason-parent-missing", code))
+    for suite in registry["suites"]:
+        problems += [(f"suite-{code}", f"{suite['id']}: {detail}")
+                     for code, detail in check_selection(suite["select"], registry)]
     return problems
+
+
+def check_selection(selection, registry):
+    """Return (code, detail) problems where a selection names unregistered standard editions or rules.
+
+    A misspelt edition or rule set would silently select nothing.
+    """
+    standards = _index(registry["standards"], "id")
+    rules = {rule for standard in registry["standards"] for rule in standard["rules"]}
+    problems = [("standard-unknown", ref) for ref in selection.get("standards", ()) if ref not in standards]
+    return problems + [("rules-unknown", name) for name in selection.get("rules", ()) if name not in rules]
+
+
+def selects(selection, case, key, status):
+    """Return whether a plan or suite selection selects the check <id>/<key> of a case with a lifecycle status.
+
+    Selection reads only the definition, the tags and the lifecycle status,
+    never a result. Invalid cases are never selected.
+    """
+    normative = case["normative"]
+    request = next(assertion["request"] for assertion in normative["assertions"] if assertion["key"] == key)
+    named = selection.get("cases")
+    if named is not None and case["id"] not in named and f"{case['id']}/{key}" not in named:
+        return False
+    for name, value in (("standards", normative["standard"]["ref"]), ("rules", normative["standard"]["rules"]),
+                        ("operations", request["operation"]), ("strictness", request["strictness"]),
+                        ("views", request["view"])):
+        if name in selection and value not in selection[name]:
+            return False
+    if status not in selection.get("lifecycle", DEFAULT_LIFECYCLE):
+        return False
+    tags = set(case["informative"]["tags"])
+    if "tags" in selection and not tags & set(selection["tags"]):
+        return False
+    return not tags & set(selection.get("exclude_tags", ()))
 
 
 def check_registry_transition(old, new):
@@ -185,7 +225,7 @@ def check_registry_transition(old, new):
         if namespace.get("closed") and current["allocated"] != namespace["allocated"]:
             problems.append(("namespace-closed", name))
     for section, key, code in (("reasons", "code", "reason-removed"), ("capabilities", "id", "capability-removed"),
-                               ("licenses", "id", "license-removed")):
+                               ("licenses", "id", "license-removed"), ("suites", "id", "suite-removed")):
         # A section added to the registry schema is absent from older registries.
         current = {item[key] for item in new.get(section, ())}
         for value in sorted({item[key] for item in old.get(section, ())} - current):
@@ -450,7 +490,21 @@ def run():
         expected = entry["violation"]
         if {stage: found} != {key: sorted(value) for key, value in expected.items()}:
             failures.append(f"invalid example {entry['name']}: expected {expected}, found {stage} {found}")
+    for name, plan in load_plans().items():
+        errors = schema_errors("plan", plan)
+        failures += [f"plans/{name}: {error.message}" for error in errors]
+        if not errors:
+            problems = check_selection(plan["select"], registry)
+            failures += [f"plans/{name}: {code}: {detail}" for code, detail in problems]
+            suite = plan["select"].get("suite")
+            if suite is not None and suite not in _index(registry["suites"], "id"):
+                failures.append(f"plans/{name}: suite-unknown: {suite}")
     return failures
+
+
+def load_plans():
+    """Return the example execution plans by file name."""
+    return {path.name: load_json(path) for path in sorted((EXAMPLES / "plans").glob("*.json"))}
 
 
 def main(argv=None):
@@ -461,7 +515,7 @@ def main(argv=None):
         print(failure, file=sys.stderr)
     if not failures:
         valid, invalid = load_examples()
-        print(f"contract ok: {len(valid)} valid and {len(invalid)} invalid examples")
+        print(f"contract ok: {len(valid)} valid and {len(invalid)} invalid examples, {len(load_plans())} example plans")
     return 1 if failures else 0
 
 

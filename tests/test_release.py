@@ -61,7 +61,8 @@ class BuildTest(ReleaseTestCase):
         self.assertEqual(sorted(path for path in files if not path.startswith("cases/")), [
             "LICENSE", "SHA256SUMS", "lifecycle-projection.json", "manifest.json", "registry/lifecycle.json",
             "registry/registry.json", "schemas/case-1.schema.json", "schemas/lifecycle-1.schema.json",
-            "schemas/manifest-1.schema.json", "schemas/registry-1.schema.json"])
+            "schemas/manifest-1.schema.json", "schemas/plan-1.schema.json", "schemas/registry-1.schema.json",
+            "schemas/resolution-1.schema.json"])
         for path in cases + ["registry/registry.json", "LICENSE"]:
             self.assertEqual(files[path], (self.root / path).read_bytes())
 
@@ -75,7 +76,7 @@ class BuildTest(ReleaseTestCase):
         self.assertEqual(manifest["licenses"], ["MIT"])
         self.assertEqual([schema["id"] for schema in manifest["schemas"]],
                          [f"urn:opentlv:corpus:schema:{kind}:1"
-                          for kind in ("case", "lifecycle", "manifest", "registry")])
+                          for kind in ("case", "lifecycle", "manifest", "plan", "registry", "resolution")])
         self.assertEqual(manifest["cases"], sorted(manifest["cases"], key=lambda case: case["id"]))
         for case in manifest["cases"]:
             self.assertEqual(case["path"], case_path(case["id"]))

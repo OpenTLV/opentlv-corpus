@@ -1,0 +1,15 @@
+{
+  "schema": "urn:opentlv:corpus:schema:plan:1",
+  "name": "der-strict-decode",
+  "description": "Strict DER decoding in the tree view, including deprecated cases but not malformed input, with longer time limits.",
+  "select": {
+    "standards": ["itu-t-x690-2021-02"],
+    "rules": ["der"],
+    "operations": ["decode"],
+    "strictness": ["strict"],
+    "views": ["tree"],
+    "exclude_tags": ["malformed"],
+    "lifecycle": ["active", "deprecated"]
+  },
+  "limits": {"execute_timeout_ms": 30000, "exit_timeout_ms": 10000}
+}

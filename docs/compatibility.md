@@ -9,6 +9,8 @@ The schema file `schemas/<kind>-<version>.schema.json` has the same URN as its `
 | Registry | `urn:opentlv:corpus:schema:registry:1` | [`schemas/registry-1.schema.json`](../schemas/registry-1.schema.json) |
 | Lifecycle log | `urn:opentlv:corpus:schema:lifecycle:1` | [`schemas/lifecycle-1.schema.json`](../schemas/lifecycle-1.schema.json) |
 | Release manifest | `urn:opentlv:corpus:schema:manifest:1` | [`schemas/manifest-1.schema.json`](../schemas/manifest-1.schema.json) |
+| Execution plan | `urn:opentlv:corpus:schema:plan:1` | [`schemas/plan-1.schema.json`](../schemas/plan-1.schema.json) |
+| Resolved execution plan | `urn:opentlv:corpus:schema:resolution:1` | [`schemas/resolution-1.schema.json`](../schemas/resolution-1.schema.json) |
 
 ## Independent versions
 
@@ -35,5 +37,6 @@ Its manifest records the data release version, the source revision and the tooli
 - Moving documents to a new schema version is a representation change, not a semantic one: the migration must preserve the normative meaning of every case.
   The canonical definition digest covers the normative content in its schema version, so it changes with the representation.
   The migration appends a `representation` revision for every case to the [lifecycle log](lifecycle.md#revise), which records the digests before and after it.
-- Reason codes, capabilities, licenses, namespaces and standard editions are registry data, so adding one is a data change, not a schema change.
+- A [resolved execution plan](execution-plan.md#resolved-execution-plan) records the release, the tooling and the adapter protocol version it was resolved with, and a runner refuses it with any other release or protocol version.
+- Reason codes, capabilities, licenses, suites, namespaces and standard editions are registry data, so adding one is a data change, not a schema change.
   Removing or repurposing one is forbidden at any version, as [Identity](identity.md) specifies.

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opentlv:corpus:schema:resolution:1",
+  "title": "OpenTLV Corpus resolved execution plan, schema version 1",
+  "description": "An execution plan resolved against one data release and one adapter: the exact checks with their definition digests and applicability decisions, the corpus, adapter and tooling identities and the effective limits. It contains no time or result, so resolving the same inputs gives the same document. See docs/execution-plan.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "plan", "corpus", "tools", "adapter", "limits", "checks"],
+  "properties": {
+    "schema": {"const": "urn:opentlv:corpus:schema:resolution:1"},
+    "plan": {
+      "description": "The plan that was resolved: its name and the digest of its canonical JSON.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "digest"],
+      "properties": {
+        "name": {"$ref": "#/$defs/key"},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "corpus": {
+      "description": "The data release: its version, the SHA-256 of its archive and the source revision from its manifest.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release", "sha256", "revision"],
+      "properties": {
+        "release": {"$ref": "#/$defs/version"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"}
+      }
+    },
+    "tools": {"$ref": "#/$defs/component", "description": "The tooling that resolved the plan."},
+    "adapter": {
+      "description": "The adapter whose capability descriptor decided applicability.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "adapter", "implementation", "descriptor"],
+      "properties": {
+        "protocol": {"type": "integer", "minimum": 1, "maximum": 2147483647, "description": "The protocol version of the descriptor."},
+        "adapter": {"$ref": "#/$defs/component"},
+        "implementation": {"$ref": "#/$defs/component"},
+        "descriptor": {"$ref": "#/$defs/digest", "description": "Digest of the canonical JSON of the capability descriptor."}
+      }
+    },
+    "limits": {
+      "description": "Effective harness limits, defaults included.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hello_timeout_ms", "execute_timeout_ms", "exit_timeout_ms", "max_message_octets", "stderr_octets"],
+      "properties": {
+        "hello_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+        "execute_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+        "exit_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+        "max_message_octets": {"type": "integer", "minimum": 4096, "maximum": 2147483647},
+        "stderr_octets": {"type": "integer", "minimum": 0, "maximum": 2147483647}
+      }
+    },
+    "checks": {
+      "description": "Every selected check, ordered by case ID and then by the order of the case's assertions, including the unsupported ones.",
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/check"}
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "version": {
+      "description": "Semantic Versioning 2.0.0 version without build metadata.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?$",
+      "maxLength": 64
+    },
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "milliseconds": {"type": "integer", "minimum": 1, "maximum": 86400000},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 128},
+        "version": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case", "assertion", "digest", "status", "applicability"],
+      "properties": {
+        "case": {"type": "string", "pattern": "^[a-z][a-z0-9]{0,15}\\.[a-z][a-z0-9]{0,15}\\.(?!000000)[0-9]{6}$"},
+        "assertion": {"$ref": "#/$defs/key"},
+        "digest": {"$ref": "#/$defs/digest", "description": "Definition digest of the case."},
+        "status": {"enum": ["active", "deprecated"], "description": "Lifecycle status of the case in the release."},
+        "applicability": {
+          "description": "applicable: the descriptor covers the request. unsupported: it does not, and the check is recorded without being sent.",
+          "enum": ["applicable", "unsupported"]
+        },
+        "problem": {
+          "description": "Why the check is unsupported, as in the adapter protocol classification.",
+          "enum": ["undeclared", "capability", "input-too-large", "too-deep"]
+        },
+        "detail": {"type": "string", "minLength": 1}
+      },
+      "if": {"properties": {"applicability": {"const": "unsupported"}}},
+      "then": {"required": ["problem", "detail"]},
+      "else": {"not": {"anyOf": [{"required": ["problem"]}, {"required": ["detail"]}]}}
+    }
+  }
+}

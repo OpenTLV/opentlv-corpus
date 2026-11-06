@@ -12,6 +12,7 @@ on every platform. See docs/release.md.
 """
 
 import argparse
+from collections import namedtuple
 import io
 import json
 from pathlib import Path
@@ -294,15 +295,27 @@ def _check_contents(corpus, top, files):
         corpus.report(PROJECTION, "projection-mismatch", "differs from the replay of registry/lifecycle.json")
 
 
-def verify(archive_path, sums_path=None):
-    """Return the diagnostics of a data release archive, and of its SHA256SUMS if given."""
+Release = namedtuple("Release", "release sha256 revision corpus")
+Release.__doc__ = """A verified data release: its version, archive SHA-256, source revision and corpus.
+
+corpus is the validated validate.Corpus of the release contents; its documents
+and case sets stay in memory after the extracted files are gone.
+"""
+
+
+def open_release(archive_path, sums_path=None):
+    """Verify a data release archive, and its SHA256SUMS if given.
+
+    Return the Release, or None when the archive cannot be read, and the
+    sorted diagnostics. A release with diagnostics must not be used.
+    """
     archive_path = Path(archive_path)
     data = archive_path.read_bytes()
     problems = set(_check_sums(archive_path, data, sums_path)) if sums_path is not None else set()
     top, files, archive_problems = read_archive(data, archive_path.name)
     problems |= set(archive_problems)
     if top is None:
-        return sorted(problems)
+        return None, sorted(problems)
     with tempfile.TemporaryDirectory() as directory:
         for path, content in files.items():
             target = Path(directory, *path.split("/"))
@@ -310,7 +323,16 @@ def verify(archive_path, sums_path=None):
             target.write_bytes(content)
         corpus = validate.validate(directory)
         _check_contents(corpus, top, files)
-    return sorted(problems | set(corpus.diagnostics))
+    problems |= set(corpus.diagnostics)
+    manifest = corpus.documents.get(MANIFEST) if not corpus.diagnostics else None
+    if manifest is None:
+        return None, sorted(problems)
+    return Release(manifest["release"], sha256(data), manifest["source"]["revision"], corpus), sorted(problems)
+
+
+def verify(archive_path, sums_path=None):
+    """Return the diagnostics of a data release archive, and of its SHA256SUMS if given."""
+    return open_release(archive_path, sums_path)[1]
 
 
 def main(argv=None):
