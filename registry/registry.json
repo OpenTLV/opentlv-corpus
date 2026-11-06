@@ -90,5 +90,8 @@
   ],
   "licenses": [
     {"id": "MIT", "name": "MIT License", "url": "https://spdx.org/licenses/MIT.html"}
+  ],
+  "suites": [
+    {"id": "smoke", "title": "Quick pull request check: the active cases tagged smoke", "select": {"tags": ["smoke"]}}
   ]
 }

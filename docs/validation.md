@@ -59,12 +59,20 @@ Documents are validated against the schema files of the tree being checked, so a
 | --- | --- |
 | `schema-id-mismatch` | `schemas/<kind>-<version>.schema.json` has the `$id` `urn:opentlv:corpus:schema:<kind>:<version>`. |
 | `schema-invalid` | The schema file is a valid JSON Schema draft 2020-12 schema. |
-| `schema-unsupported` | The document declares the schema version this tooling checks for its kind: case, registry, lifecycle log or manifest version 1. |
+| `schema-unsupported` | The document declares the schema version this tooling checks for its kind: case, registry, lifecycle log or manifest version 1. The plan and resolved plan schema files are required and checked too; plans are checked by [`scripts/plan.py`](../scripts/plan.py). |
 | `schema` | The document matches its schema. |
 
 ## Registry
 
 The registry rules of [Identity](identity.md#namespaces): `registry-duplicate`, `namespace-purpose`, `namespace-standard-unknown`, `namespace-rules-unsupported` and `reason-parent-missing`.
+
+The [suites](execution-plan.md#suites) are checked against the registry and the conformance set:
+
+| Code | Rule |
+| --- | --- |
+| `suite-standard-unknown`, `suite-rules-unknown` | A suite selects only registered standard editions and rule sets. |
+| `suite-case-unknown` | Each case or check a suite names is in the conformance set. |
+| `suite-case-excluded` | Each case or check a suite names is selected by the suite's other conditions, such as its lifecycle statuses. |
 
 ## Cases
 

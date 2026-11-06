@@ -1,0 +1,6 @@
+{
+  "schema": "urn:opentlv:corpus:schema:plan:1",
+  "name": "explicit",
+  "description": "One whole case and one check of another case, named by ID.",
+  "select": {"cases": ["asn1.der.000001", "asn1.der.000004/strict"]}
+}

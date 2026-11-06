@@ -5,8 +5,8 @@
 
 The validator runs every check one revision can answer: encoding and JSON
 syntax of every document, the schema files, the registry, each case set with
-its IDs, paths, references, digests and licenses, the lifecycle logs and the
-published release records. Each problem is one diagnostic,
+its IDs, paths, references, digests and licenses, the lifecycle logs, the
+cases the registered suites name and the published release records. Each problem is one diagnostic,
 "<path>: <code>: <detail>", and the diagnostics are sorted, so two runs over
 the same files print the same bytes.
 
@@ -33,7 +33,7 @@ ROOT = check_contract.ROOT
 SCHEMA_URN = "urn:opentlv:corpus:schema:{kind}:{version}"
 SCHEMA_FILE = re.compile(r"([a-z]+)-([1-9][0-9]*)\.schema\.json")
 # Document kinds and the schema version of each that this tooling checks.
-SUPPORTED = {"case": 1, "registry": 1, "lifecycle": 1, "manifest": 1}
+SUPPORTED = {"case": 1, "registry": 1, "lifecycle": 1, "manifest": 1, "plan": 1, "resolution": 1}
 DOCUMENT_DIRS = ("schemas", "registry", "cases", "examples", "releases")
 REGISTRY = "registry/registry.json"
 LICENSE = "LICENSE"
@@ -279,6 +279,32 @@ def _check_set(corpus, name, directory, log_path):
     corpus.sets[name] = CaseSet(name, cases, digests, log, projection)
 
 
+def _check_suites(corpus):
+    """Report the case and check IDs a registered suite names that are unknown or that the suite never selects.
+
+    A suite in a release is then always resolvable: no consumer pinned to the
+    release can find a case it names missing or excluded.
+    """
+    conformance = corpus.sets.get("conformance")
+    if conformance is None:
+        return
+    cases = {case["id"]: case for case in conformance.cases.values()}
+    statuses = {entry["id"]: entry["status"] for entry in conformance.projection["cases"]} \
+        if conformance.projection else None
+    for suite in corpus.registry["suites"]:
+        for ref in suite["select"].get("cases", ()):
+            case_id, _, key = ref.partition("/")
+            case = cases.get(case_id)
+            keys = [assertion["key"] for assertion in case["normative"]["assertions"]] if case else []
+            if case is None or (key and key not in keys):
+                corpus.report(REGISTRY, "suite-case-unknown", f"{suite['id']}: {ref}")
+            elif statuses is not None and not any(
+                    check_contract.selects(suite["select"], case, name, statuses[case_id])
+                    for name in ([key] if key else keys)):
+                corpus.report(REGISTRY, "suite-case-excluded", f"{suite['id']}: {ref} is {statuses[case_id]} or "
+                              "outside the suite's other conditions")
+
+
 def _check_release_records(corpus):
     versions = {}
     for path in corpus.files:
@@ -338,6 +364,7 @@ def validate(root=ROOT):
         present = paths["log"] in corpus.files or any(path.startswith(paths["cases"] + "/") for path in corpus.files)
         if present or name in REQUIRED_SETS:
             _check_set(corpus, name, paths["cases"], paths["log"])
+    _check_suites(corpus)
     _check_release_records(corpus)
     return corpus
 
