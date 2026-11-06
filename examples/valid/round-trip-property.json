@@ -1,0 +1,137 @@
+{
+  "schema": "urn:opentlv:corpus:schema:case:1",
+  "id": "example.ber.000002",
+  "normative": {
+    "standard": {
+      "ref": "itu-t-x690-2021-02",
+      "rules": "ber"
+    },
+    "type": {
+      "kind": "sequence",
+      "fields": [
+        {
+          "name": "flag",
+          "type": {
+            "kind": "boolean"
+          }
+        },
+        {
+          "name": "count",
+          "type": {
+            "kind": "integer"
+          }
+        }
+      ]
+    },
+    "input": {
+      "octets": "30800101ff0201050000"
+    },
+    "assertions": [
+      {
+        "key": "decode",
+        "request": {
+          "operation": "decode",
+          "strictness": "strict",
+          "view": "value"
+        },
+        "clauses": [
+          "8.1.3.6",
+          "8.1.5",
+          "8.9.1",
+          "8.9.2"
+        ],
+        "expect": {
+          "result": {
+            "outcome": "accept",
+            "value": {
+              "kind": "sequence",
+              "fields": [
+                {
+                  "name": "flag",
+                  "value": {
+                    "kind": "boolean",
+                    "value": true
+                  }
+                },
+                {
+                  "name": "count",
+                  "value": {
+                    "kind": "integer",
+                    "value": "5"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "key": "round-trip-tree",
+        "request": {
+          "operation": "round-trip",
+          "strictness": "strict",
+          "view": "tree"
+        },
+        "clauses": [
+          "8.1.3.2 b)",
+          "8.1.3.6"
+        ],
+        "expect": {
+          "result": {
+            "outcome": "accept",
+            "preserves": "tree"
+          }
+        }
+      },
+      {
+        "key": "round-trip-value",
+        "request": {
+          "operation": "round-trip",
+          "strictness": "strict",
+          "view": "value"
+        },
+        "clauses": [
+          "8.1.3.2 b)",
+          "8.1.3.6"
+        ],
+        "expect": {
+          "result": {
+            "outcome": "accept",
+            "preserves": "value"
+          }
+        }
+      }
+    ]
+  },
+  "informative": {
+    "title": "BER indefinite-length SEQUENCE keeps its value but not its octets",
+    "description": "BER encoder conformance is asserted as a round-trip property instead of an exact octet string.",
+    "tags": [
+      "constructed",
+      "sequence",
+      "indefinite-length",
+      "typed-value"
+    ],
+    "related": [
+      "example.der.000002"
+    ],
+    "oracle": {
+      "source": "specification",
+      "rationale": "30 80 opens a constructed SEQUENCE with an indefinite length that the end-of-contents octets 00 00 close (8.1.3.6, 8.1.5); its components are TRUE and 5 (8.9.2). A BER encoder may choose the definite or indefinite form for a constructed encoding (8.1.3.2 b), so a re-encoding must preserve the tree and the value but need not reproduce these octets.",
+      "review": {
+        "status": "self-reviewed",
+        "reviewers": [
+          "Marek Cingel"
+        ],
+        "date": "2026-11-06"
+      }
+    },
+    "provenance": {
+      "origin": "authored",
+      "authors": [
+        "Marek Cingel"
+      ],
+      "license": "MIT"
+    }
+  }
+}

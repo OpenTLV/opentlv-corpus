@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Marek Cingel
+
+# Local builds, virtual environments and evidence
+/build/
+
+# Python bytecode
+__pycache__/
+*.pyc

@@ -1,0 +1,91 @@
+{
+  "schema": "urn:opentlv:corpus:schema:registry:1",
+  "standards": [
+    {
+      "id": "itu-t-x690-2021-02",
+      "document": "ITU-T X.690",
+      "edition": "02/2021",
+      "title": "Information technology - ASN.1 encoding rules: Specification of Basic Encoding Rules (BER), Canonical Encoding Rules (CER) and Distinguished Encoding Rules (DER)",
+      "url": "https://www.itu.int/rec/T-REC-X.690-202102-I/en",
+      "rules": ["ber", "cer", "der"]
+    }
+  ],
+  "namespaces": [
+    {
+      "id": "asn1.ber",
+      "purpose": "conformance",
+      "title": "ASN.1 Basic Encoding Rules",
+      "rules": "ber",
+      "standards": ["itu-t-x690-2021-02"],
+      "allocated": 0
+    },
+    {
+      "id": "asn1.cer",
+      "purpose": "conformance",
+      "title": "ASN.1 Canonical Encoding Rules",
+      "rules": "cer",
+      "standards": ["itu-t-x690-2021-02"],
+      "allocated": 0
+    },
+    {
+      "id": "asn1.der",
+      "purpose": "conformance",
+      "title": "ASN.1 Distinguished Encoding Rules",
+      "rules": "der",
+      "standards": ["itu-t-x690-2021-02"],
+      "allocated": 0
+    },
+    {
+      "id": "example.ber",
+      "purpose": "example",
+      "title": "Schema examples using the Basic Encoding Rules",
+      "rules": "ber",
+      "standards": ["itu-t-x690-2021-02"],
+      "allocated": 2
+    },
+    {
+      "id": "example.der",
+      "purpose": "example",
+      "title": "Schema examples using the Distinguished Encoding Rules",
+      "rules": "der",
+      "standards": ["itu-t-x690-2021-02"],
+      "allocated": 6
+    }
+  ],
+  "reasons": [
+    {"code": "input", "description": "The input as a whole is not a single complete encoding."},
+    {"code": "input.empty", "description": "The input contains no octets."},
+    {"code": "input.truncated", "description": "The input ends before the encoding is complete."},
+    {"code": "input.trailing", "description": "Octets remain after one complete encoding."},
+    {"code": "identifier", "description": "The identifier octets are invalid."},
+    {"code": "identifier.high-form-low-number", "description": "The high-tag-number form encodes a tag number below 31 (X.690 8.1.2.3)."},
+    {"code": "identifier.non-minimal", "description": "The first subsequent identifier octet has bits 7 to 1 all zero (X.690 8.1.2.4.2 c)."},
+    {"code": "length", "description": "The length octets are invalid."},
+    {"code": "length.reserved", "description": "The initial length octet is the reserved value FF (X.690 8.1.3.5 c)."},
+    {"code": "length.indefinite-primitive", "description": "A primitive encoding uses the indefinite length form (X.690 8.1.3.2 a)."},
+    {"code": "length.form-forbidden", "description": "The length form is not the one the encoding rules require, such as indefinite in DER or definite for a constructed CER encoding (X.690 9.1, 10.1)."},
+    {"code": "length.non-minimal", "description": "A definite length is not encoded in the minimum number of octets (X.690 9.1, 10.1)."},
+    {"code": "length.exceeds-container", "description": "A nested encoding extends beyond the contents of the enclosing constructed encoding."},
+    {"code": "end-of-contents", "description": "The end-of-contents octets are missing, misplaced or malformed."},
+    {"code": "end-of-contents.missing", "description": "An indefinite-length encoding has no end-of-contents octets (X.690 8.1.3.6)."},
+    {"code": "end-of-contents.unexpected", "description": "End-of-contents octets appear outside an indefinite-length encoding."},
+    {"code": "end-of-contents.malformed", "description": "End-of-contents octets are not exactly two zero octets (X.690 8.1.5)."},
+    {"code": "form", "description": "The primitive or constructed form is not permitted."},
+    {"code": "form.constructed-forbidden", "description": "A constructed encoding is used where the rules require the primitive form."},
+    {"code": "form.primitive-forbidden", "description": "A primitive encoding is used where the rules require the constructed form."},
+    {"code": "contents", "description": "The contents octets are invalid for the type or the encoding rules."},
+    {"code": "contents.invalid-length", "description": "The number of contents octets is not permitted for the type, such as a BOOLEAN that is not one octet (X.690 8.2.1)."},
+    {"code": "contents.non-minimal", "description": "An INTEGER or ENUMERATED value is not encoded in the minimum number of octets (X.690 8.3.2)."},
+    {"code": "contents.non-canonical", "description": "The contents are valid BER but not the canonical CER or DER form, such as a BOOLEAN TRUE other than FF (X.690 11.1)."},
+    {"code": "order", "description": "Components are not in the canonical order the encoding rules require."},
+    {"code": "order.set-of", "description": "SET OF components are not in the canonical order (X.690 11.6)."},
+    {"code": "value", "description": "The encoding does not match the expected type."},
+    {"code": "value.tag-mismatch", "description": "An identifier does not match the tag the type requires."},
+    {"code": "value.missing-component", "description": "A mandatory component of a SEQUENCE or SET is absent."}
+  ],
+  "capabilities": [
+    {"id": "tag-number.over-31-bits", "description": "Tag numbers greater than 2^31 - 1."},
+    {"id": "integer.over-64-bits", "description": "Typed INTEGER and ENUMERATED values outside the signed 64-bit range."},
+    {"id": "object-identifier.arc-over-64-bits", "description": "Typed OBJECT IDENTIFIER arcs greater than 2^64 - 1."}
+  ]
+}

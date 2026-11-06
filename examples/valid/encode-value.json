@@ -1,0 +1,84 @@
+{
+  "schema": "urn:opentlv:corpus:schema:case:1",
+  "id": "example.der.000003",
+  "normative": {
+    "standard": {
+      "ref": "itu-t-x690-2021-02",
+      "rules": "der"
+    },
+    "type": {
+      "kind": "integer"
+    },
+    "input": {
+      "value": {
+        "kind": "integer",
+        "value": "128"
+      }
+    },
+    "assertions": [
+      {
+        "key": "encode",
+        "request": {
+          "operation": "encode",
+          "strictness": "strict",
+          "view": "value"
+        },
+        "clauses": [
+          "8.3.2",
+          "8.3.3",
+          "10.1"
+        ],
+        "expect": {
+          "result": {
+            "outcome": "accept",
+            "octets": "02020080"
+          }
+        }
+      },
+      {
+        "key": "round-trip",
+        "request": {
+          "operation": "round-trip",
+          "strictness": "strict",
+          "view": "value"
+        },
+        "clauses": [
+          "8.3.2",
+          "8.3.3"
+        ],
+        "expect": {
+          "result": {
+            "outcome": "accept",
+            "preserves": "value"
+          }
+        }
+      }
+    ]
+  },
+  "informative": {
+    "title": "DER INTEGER 128 needs a leading zero octet",
+    "tags": [
+      "primitive",
+      "integer",
+      "boundary"
+    ],
+    "oracle": {
+      "source": "specification",
+      "rationale": "In two's complement 128 is 80 only with a leading 00 octet, and 00 80 is minimal because its first nine bits are not all zero (8.3.2, 8.3.3); DER requires the one-octet short-form length for the two contents octets (10.1).",
+      "review": {
+        "status": "self-reviewed",
+        "reviewers": [
+          "Marek Cingel"
+        ],
+        "date": "2026-11-06"
+      }
+    },
+    "provenance": {
+      "origin": "authored",
+      "authors": [
+        "Marek Cingel"
+      ],
+      "license": "MIT"
+    }
+  }
+}

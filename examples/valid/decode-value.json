@@ -1,0 +1,97 @@
+{
+  "schema": "urn:opentlv:corpus:schema:case:1",
+  "id": "example.der.000002",
+  "normative": {
+    "standard": {
+      "ref": "itu-t-x690-2021-02",
+      "rules": "der"
+    },
+    "type": {
+      "kind": "sequence",
+      "fields": [
+        {
+          "name": "flag",
+          "type": {
+            "kind": "boolean"
+          }
+        },
+        {
+          "name": "count",
+          "type": {
+            "kind": "integer"
+          }
+        }
+      ]
+    },
+    "input": {
+      "octets": "30060101ff020105"
+    },
+    "assertions": [
+      {
+        "key": "decode",
+        "request": {
+          "operation": "decode",
+          "strictness": "strict",
+          "view": "value"
+        },
+        "clauses": [
+          "8.9.1",
+          "8.9.2",
+          "8.2.2",
+          "8.3.1",
+          "11.1"
+        ],
+        "expect": {
+          "result": {
+            "outcome": "accept",
+            "value": {
+              "kind": "sequence",
+              "fields": [
+                {
+                  "name": "flag",
+                  "value": {
+                    "kind": "boolean",
+                    "value": true
+                  }
+                },
+                {
+                  "name": "count",
+                  "value": {
+                    "kind": "integer",
+                    "value": "5"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "informative": {
+    "title": "DER SEQUENCE decodes to a typed two-field value",
+    "tags": [
+      "constructed",
+      "sequence",
+      "typed-value"
+    ],
+    "oracle": {
+      "source": "specification",
+      "rationale": "30 is a constructed universal SEQUENCE with six contents octets holding the encodings of its components in order (8.9.1, 8.9.2): BOOLEAN FF is TRUE (8.2.2, 11.1) and INTEGER 05 is 5 (8.3.1).",
+      "review": {
+        "status": "self-reviewed",
+        "reviewers": [
+          "Marek Cingel"
+        ],
+        "date": "2026-11-06"
+      }
+    },
+    "provenance": {
+      "origin": "authored",
+      "authors": [
+        "Marek Cingel"
+      ],
+      "license": "MIT"
+    }
+  }
+}
