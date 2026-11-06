@@ -23,7 +23,7 @@ def codes(problems):
 
 class SchemaTest(unittest.TestCase):
     def test_schemas_are_valid_draft_2020_12_and_versioned(self):
-        for kind in ("case", "registry"):
+        for kind in ("case", "registry", "manifest"):
             schema = contract.load_json(contract.SCHEMAS / f"{kind}-1.schema.json")
             Draft202012Validator.check_schema(schema)
             self.assertEqual(schema["$id"], f"urn:opentlv:corpus:schema:{kind}:1")
@@ -142,15 +142,17 @@ class RegistryTest(unittest.TestCase):
         self.assertEqual(contract.check_registry(REGISTRY), [])
 
     def test_registry_problems(self):
-        cases = {
-            "registry-duplicate": lambda r: r["namespaces"].append(copy.deepcopy(r["namespaces"][0])),
-            "namespace-purpose": lambda r: namespace(r, "asn1.der").update(purpose="example"),
-            "namespace-standard-unknown": lambda r: namespace(r, "asn1.der")["standards"].append("itu-t-x690-2015-08"),
-            "namespace-rules-unsupported": lambda r: namespace(r, "asn1.der").update(rules="xer"),
-            "reason-parent-missing": lambda r: r["reasons"].append({"code": "framing.missing", "description": "x"}),
-        }
-        for code, change in cases.items():
-            with self.subTest(code):
+        cases = [
+            ("registry-duplicate", lambda r: r["namespaces"].append(copy.deepcopy(r["namespaces"][0]))),
+            ("registry-duplicate", lambda r: r["licenses"].append(copy.deepcopy(r["licenses"][0]))),
+            ("namespace-purpose", lambda r: namespace(r, "asn1.der").update(purpose="example")),
+            ("namespace-standard-unknown",
+             lambda r: namespace(r, "asn1.der")["standards"].append("itu-t-x690-2015-08")),
+            ("namespace-rules-unsupported", lambda r: namespace(r, "asn1.der").update(rules="xer")),
+            ("reason-parent-missing", lambda r: r["reasons"].append({"code": "framing.missing", "description": "x"})),
+        ]
+        for index, (code, change) in enumerate(cases):
+            with self.subTest(index=index, code=code):
                 registry = self.mutated(change)
                 self.assertEqual(contract.schema_errors("registry", registry), [])
                 self.assertEqual(codes(contract.check_registry(registry)), [code])
@@ -171,6 +173,7 @@ class RegistryTest(unittest.TestCase):
             "deprecate reason": lambda r: r["reasons"][1].update(deprecated=True),
             "retitle namespace": lambda r: namespace(r, "asn1.ber").update(title="Basic Encoding Rules"),
             "close namespace": lambda r: namespace(r, "asn1.ber").update(closed=True),
+            "add license": lambda r: r["licenses"].append({"id": "CC0-1.0", "name": "x", "url": "https://x"}),
         }
         for label, change in allowed.items():
             with self.subTest(label):
@@ -186,10 +189,16 @@ class RegistryTest(unittest.TestCase):
             "standard-rules-removed": lambda r: r["standards"][0].update(rules=["ber", "der"]),
             "reason-removed": lambda r: r["reasons"].pop(),
             "capability-removed": lambda r: r["capabilities"].pop(),
+            "license-removed": lambda r: r["licenses"].pop(),
         }
         for code, change in forbidden.items():
             with self.subTest(code):
                 self.assertIn(code, codes(contract.check_registry_transition(REGISTRY, self.mutated(change))))
+
+    def test_a_section_added_to_the_schema_is_empty_in_older_registries(self):
+        older = self.mutated(lambda r: r.pop("licenses"))
+        self.assertEqual(contract.check_registry_transition(older, REGISTRY), [])
+        self.assertEqual(codes(contract.check_registry_transition(REGISTRY, older)), ["license-removed"])
 
     def test_closed_namespaces_stay_closed(self):
         closed = self.mutated(lambda r: namespace(r, "asn1.ber").update(closed=True))
@@ -199,6 +208,30 @@ class RegistryTest(unittest.TestCase):
         grown = copy.deepcopy(closed)
         namespace(grown, "asn1.ber")["allocated"] = 1
         self.assertEqual(codes(contract.check_registry_transition(closed, grown)), ["namespace-closed"])
+
+
+class LicenseTest(unittest.TestCase):
+    def test_license_expressions(self):
+        for expression, ids in (("MIT", ["MIT"]), ("MIT OR Apache-2.0", ["MIT", "Apache-2.0"]),
+                                ("(MIT AND CC0-1.0) OR BSD-2-Clause", ["MIT", "CC0-1.0", "BSD-2-Clause"]),
+                                ("GPL-2.0+", ["GPL-2.0+"]), ("LicenseRef-x", ["LicenseRef-x"])):
+            with self.subTest(expression):
+                self.assertEqual(contract.license_ids(expression), ids)
+        for expression in ("", " MIT", "MIT ", "MIT AND", "AND MIT", "MIT MIT", "(MIT", "MIT)", "()", "mit or x",
+                           "MIT WITH Classpath-exception-2.0", "MIT/X11", "MIT,X11", "OR"):
+            with self.subTest(expression):
+                self.assertIsNone(contract.license_ids(expression))
+
+    def test_case_licenses_are_registered(self):
+        case = copy.deepcopy(VALID["decode-tree.json"])
+        case["informative"]["provenance"]["license"] = "MIT OR CC0-1.0"
+        self.assertEqual(contract.check_case(case, REGISTRY), [("license-unregistered", "provenance: CC0-1.0")])
+        case = copy.deepcopy(VALID["decode-tree.json"])
+        case["informative"]["oracle"].update(source="published-vector", vectors=[
+            {"publisher": "x", "name": "x", "url": "https://x", "license": "MIT"},
+            {"publisher": "x", "name": "x", "url": "https://x", "license": "Proprietary"}])
+        self.assertEqual(contract.schema_errors("case", case), [])
+        self.assertEqual(contract.check_case(case, REGISTRY), [("license-unregistered", "vectors/1: Proprietary")])
 
 
 class OracleBlindTest(unittest.TestCase):

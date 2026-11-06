@@ -218,6 +218,10 @@ It never comes from what an implementation does.
 
 `provenance` records `origin` (`authored`, `migrated` or `imported`), `authors` and the SPDX `license` of the case data.
 Migrated and imported cases also record their `source` repository, revision, path and original ID.
+
+The `license` of the provenance and of each published vector is an SPDX expression of license identifiers combined with `AND`, `OR` and parentheses, such as `MIT` or `MIT OR CC0-1.0`.
+Every identifier must be registered in the registry's `licenses`, which lists the licenses that permit redistributing case data in a [data release](release.md).
+A case whose data or source vectors may not be redistributed therefore cannot enter the corpus.
 Untriaged or security-sensitive fuzzing material is never imported into a public release.
 
 ## Oracle-blind requests
@@ -238,6 +242,9 @@ Besides the JSON Schema it checks:
 - reason codes and capabilities are registered;
 - typed values and defaults conform to `type`, no field repeats its default, and a declared `type` is used;
 - a self-review is by authors only and a peer review includes a non-author;
+- every license is a registered license in a valid expression;
 - across cases, IDs are unique and `related` IDs exist.
+
+[`scripts/validate.py`](../scripts/validate.py) applies the same rules to every case of the corpus, together with the file, encoding, path, digest and lifecycle checks of [Corpus validation](validation.md).
 
 The schema patterns use ECMA-262 semantics, so a string with a trailing newline never matches an anchored pattern.

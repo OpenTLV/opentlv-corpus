@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opentlv:corpus:schema:manifest:1",
+  "title": "OpenTLV Corpus data release manifest, schema version 1",
+  "description": "Identity and contents of one data-only release: its versions, source revision, schema files, licenses, case index and the size and SHA-256 of every file. See docs/release.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "corpus", "release", "phase", "source", "tools", "schemas", "licenses", "cases", "files"],
+  "properties": {
+    "schema": {"const": "urn:opentlv:corpus:schema:manifest:1"},
+    "corpus": {"const": "opentlv-corpus"},
+    "release": {"$ref": "#/$defs/version", "description": "Data release version."},
+    "phase": {"enum": ["0.x", "stable"], "description": "Lifecycle phase of the conformance log."},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "revision"],
+      "properties": {
+        "repository": {"type": "string", "pattern": "^https://"},
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$", "description": "Git commit the release was built from."}
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "opentlv-corpus-tools"},
+        "version": {"$ref": "#/$defs/version"}
+      }
+    },
+    "schemas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^urn:opentlv:corpus:schema:[a-z]+:[1-9][0-9]*$"},
+          "path": {"type": "string", "pattern": "^schemas/[a-z]+-[1-9][0-9]*\\.schema\\.json$"}
+        }
+      }
+    },
+    "licenses": {
+      "description": "SPDX identifiers of every license the case data uses.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$"}
+    },
+    "cases": {
+      "description": "Conformance cases ordered by ID, with their file and canonical definition digest.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "digest"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9]{0,15}\\.[a-z][a-z0-9]{0,15}\\.(?!000000)[0-9]{6}$"},
+          "path": {"$ref": "#/$defs/path"},
+          "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "files": {
+      "description": "Every file of the release except manifest.json and SHA256SUMS, ordered by path.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": {"$ref": "#/$defs/path"},
+          "size": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "version": {
+      "description": "Semantic Versioning 2.0.0 version without build metadata.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?$",
+      "maxLength": 64
+    },
+    "path": {
+      "description": "Relative path inside the release, with / separators.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$",
+      "maxLength": 200
+    }
+  }
+}

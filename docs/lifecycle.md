@@ -110,6 +110,7 @@ Replaying a log over the current definitions gives its projection:
 - `tainted` lists the definitions whose expectations were found wrong: every `invalidate` event and every `expectation-wrong` or `definition-wrong` revision, in log order.
 
 The projection is a pure function of the definitions and the events, so anyone holding both reproduces it exactly.
+A [data release](release.md) ships the projection of the conformance log as `lifecycle-projection.json`.
 [`examples/lifecycle-projection.json`](../examples/lifecycle-projection.json) is the projection of the example log, and `python scripts/check_lifecycle.py --projection examples` prints it.
 
 ## Historical results
@@ -138,4 +139,5 @@ Because raw observations are kept separately from verdicts, an affected result c
 - the phase did not return from `stable` to `0.x`;
 - no case file at the base was deleted;
 - a case whose definition changed has a `revise` event appended in the same change, and the first appended event of an existing case names its digest at the base;
-- the registry transition rules of [Identity](identity.md#serial-allocation) hold.
+- the registry transition rules of [Identity](identity.md#serial-allocation) hold;
+- no [published release record](release.md#published-releases) was changed or removed.
