@@ -1,0 +1,5 @@
+{"title": "An adapter that shares no protocol version with the harness", "stub_arguments": ["--protocols", "2"]}
+{"send": {"id": "1", "method": "hello", "params": {"protocols": [1], "max_message_octets": 4194304}}}
+{"receive": {"id": "1", "error": {"code": "version-unsupported", "message": "speaks protocols 2"}}, "status": "unsupported"}
+{"close": true}
+{"exit": 0}

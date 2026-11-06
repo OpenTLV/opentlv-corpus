@@ -9,8 +9,8 @@ The cases are language-neutral data, usable by OpenTLV Core, its bindings, OpenT
 ## Status
 
 The corpus is in its foundation phase.
-The test case, registry, lifecycle and release manifest schemas, the ID and namespace rules, the oracle contract, the canonical definition digest, the corpus validator and the data-only release are defined; conformance cases, the adapter protocol and the runner follow.
-Schema version 1 is provisional until the first stable corpus release.
+The test case, registry, lifecycle and release manifest schemas, the ID and namespace rules, the oracle contract, the canonical definition digest, the corpus validator, the data-only release and the adapter process protocol are defined; conformance cases and the runner follow.
+Schema version 1 and protocol version 1 are provisional until the first stable corpus release.
 
 ## Layout
 
@@ -29,6 +29,10 @@ Schema version 1 is provisional until the first stable corpus release.
 | [`scripts/check_history.py`](scripts/check_history.py) | Checks a change against its base revision for rewritten history |
 | [`scripts/validate.py`](scripts/validate.py) | Validates a corpus tree, the repository or an extracted release, with deterministic diagnostics |
 | [`scripts/release.py`](scripts/release.py) | Builds and verifies the reproducible data-only release |
+| [`scripts/protocol.py`](scripts/protocol.py) | Harness side of the adapter process protocol: framing, classification, sessions and restarts |
+| [`scripts/check_adapter.py`](scripts/check_adapter.py) | Checks that an adapter follows the adapter process protocol |
+| [`protocol/`](protocol) | JSON Schemas of the adapter protocol requests, responses and capability descriptor, and golden transcripts |
+| [`tests/stub_adapter.py`](tests/stub_adapter.py) | Minimal adapter, standard library only, that the protocol tests and transcripts use |
 | `releases/` | Manifests and checksums of published releases, never changed |
 | [`docs/`](docs) | Specifications |
 
@@ -40,6 +44,7 @@ Schema version 1 is provisional until the first stable corpus release.
 - [Canonical definition digest](docs/digest.md): RFC 8785 canonicalization, SHA-256, digest scope, byte encoding and limits.
 - [Corpus validation](docs/validation.md): what the validator checks and its diagnostic format.
 - [Data release](docs/release.md): the data-only archive, its manifest and checksums, reproducibility, verification without Python and published release records.
+- [Adapter process protocol](docs/adapter-protocol.md): JSON Lines over standard streams, handshake and capability descriptor, oracle-blind requests, normalized observations, limits, lifecycle and restarts, failure classification and retries.
 - [Schema compatibility](docs/compatibility.md): schema versions and how they relate to data, tooling and protocol versions.
 
 ## Checks
@@ -53,6 +58,12 @@ python scripts/check_lifecycle.py
 python scripts/validate.py
 python scripts/check_history.py --base origin/main
 python -m unittest discover -s tests -v
+```
+
+Check an adapter against the protocol:
+
+```sh
+python scripts/check_adapter.py -- python tests/stub_adapter.py
 ```
 
 Build and verify a data release:
