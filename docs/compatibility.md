@@ -8,6 +8,7 @@ The schema file `schemas/<kind>-<version>.schema.json` has the same URN as its `
 | Test case | `urn:opentlv:corpus:schema:case:1` | [`schemas/case-1.schema.json`](../schemas/case-1.schema.json) |
 | Registry | `urn:opentlv:corpus:schema:registry:1` | [`schemas/registry-1.schema.json`](../schemas/registry-1.schema.json) |
 | Lifecycle log | `urn:opentlv:corpus:schema:lifecycle:1` | [`schemas/lifecycle-1.schema.json`](../schemas/lifecycle-1.schema.json) |
+| Release manifest | `urn:opentlv:corpus:schema:manifest:1` | [`schemas/manifest-1.schema.json`](../schemas/manifest-1.schema.json) |
 
 ## Independent versions
 
@@ -18,7 +19,8 @@ Four versions move independently, and each consumer records the ones it uses:
 - **Tooling** is the version of the Python validator, resolver, runner and reporter.
 - **The adapter protocol** has its own version, so adapters do not change when only data or tooling does.
 
-A data release ships the exact schema files its documents use, so a consumer can validate a release without the Python tooling and without fetching anything else.
+A [data release](release.md) ships the exact schema files its documents use, so a consumer can validate a release without the Python tooling and without fetching anything else.
+Its manifest records the data release version, the source revision and the tooling version, and each document records its schema version.
 
 ## Rules
 
@@ -32,5 +34,5 @@ A data release ships the exact schema files its documents use, so a consumer can
 - Moving documents to a new schema version is a representation change, not a semantic one: the migration must preserve the normative meaning of every case.
   The canonical definition digest covers the normative content in its schema version, so it changes with the representation.
   The migration appends a `representation` revision for every case to the [lifecycle log](lifecycle.md#revise), which records the digests before and after it.
-- Reason codes, capabilities, namespaces and standard editions are registry data, so adding one is a data change, not a schema change.
+- Reason codes, capabilities, licenses, namespaces and standard editions are registry data, so adding one is a data change, not a schema change.
   Removing or repurposing one is forbidden at any version, as [Identity](identity.md) specifies.

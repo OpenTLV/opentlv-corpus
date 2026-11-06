@@ -6,7 +6,7 @@
 JSON Schema covers structure. This module adds the rules a schema cannot
 express: registry consistency, ID allocation, registry transitions that would
 reuse or repurpose an identity, input and view compatibility, value and type
-conformity, and review independence. It also defines the oracle-blind view,
+conformity, review independence and registered licenses. It also defines the oracle-blind view,
 the only part of a case an adapter may ever receive.
 
 Run it to check the committed registry and the schema examples.
@@ -36,6 +36,8 @@ EXPECTATION_KEYS = frozenset({"expect", "expected", "expectation", "result", "on
 
 
 CASE_ID = re.compile(load_json(SCHEMAS / "case-1.schema.json")["$defs"]["caseId"]["pattern"])
+LICENSE_TOKEN = re.compile(r"\(|\)|[A-Za-z0-9][A-Za-z0-9.+-]*")
+LICENSE_OPERATORS = frozenset({"AND", "OR", "WITH"})
 
 
 def _ecma_pattern(validator, pattern, instance, schema):
@@ -89,6 +91,30 @@ def next_id(registry, namespace):
     return format_id(namespace, entry["allocated"]), updated
 
 
+def license_ids(expression):
+    """Return the license identifiers of an SPDX expression, or None if it is malformed.
+
+    The corpus accepts identifiers combined with AND, OR and parentheses.
+    """
+    tokens = LICENSE_TOKEN.findall(expression)
+    if "".join(tokens) != "".join(expression.split()) or expression != expression.strip():
+        return None
+    ids, operand, depth = [], True, 0
+    for token in tokens:
+        if operand and token == "(":
+            depth += 1
+        elif operand and token not in LICENSE_OPERATORS and token != ")":
+            ids.append(token)
+            operand = False
+        elif not operand and token == ")" and depth:
+            depth -= 1
+        elif not operand and token in ("AND", "OR"):
+            operand = True
+        else:
+            return None
+    return ids if not operand and not depth else None
+
+
 def _index(items, key):
     return {item[key]: item for item in items}
 
@@ -105,7 +131,8 @@ def _duplicates(values):
 def check_registry(registry):
     """Return (code, detail) problems inside one registry document."""
     problems = []
-    for section, key in (("standards", "id"), ("namespaces", "id"), ("reasons", "code"), ("capabilities", "id")):
+    for section, key in (("standards", "id"), ("namespaces", "id"), ("reasons", "code"), ("capabilities", "id"),
+                         ("licenses", "id")):
         for value in _duplicates(item[key] for item in registry[section]):
             problems.append(("registry-duplicate", f"{section}: {value}"))
     standards = _index(registry["standards"], "id")
@@ -157,9 +184,11 @@ def check_registry_transition(old, new):
             problems.append(("namespace-reopened", name))
         if namespace.get("closed") and current["allocated"] != namespace["allocated"]:
             problems.append(("namespace-closed", name))
-    for section, key, code in (("reasons", "code", "reason-removed"), ("capabilities", "id", "capability-removed")):
-        current = {item[key] for item in new[section]}
-        for value in sorted({item[key] for item in old[section]} - current):
+    for section, key, code in (("reasons", "code", "reason-removed"), ("capabilities", "id", "capability-removed"),
+                               ("licenses", "id", "license-removed")):
+        # A section added to the registry schema is absent from older registries.
+        current = {item[key] for item in new.get(section, ())}
+        for value in sorted({item[key] for item in old.get(section, ())} - current):
             problems.append((code, value))
     return problems
 
@@ -216,6 +245,13 @@ def _check_type_defaults(type_, path="type"):
     for name in _duplicates(field["name"] for field in type_.get("fields", type_.get("alternatives", ()))):
         problems.append(("type-duplicate-name", f"{path}: {name}"))
     return problems
+
+
+def _check_license(expression, licenses, label):
+    ids = license_ids(expression)
+    if ids is None:
+        return [("license-expression-invalid", f"{label}: {expression!r}")]
+    return [("license-unregistered", f"{label}: {license}") for license in ids if license not in licenses]
 
 
 def _results(expect):
@@ -304,6 +340,10 @@ def check_case(case, registry):
         problems.append(("review-status-mismatch", "self-reviewed by a non-author; use peer-reviewed"))
     if review["status"] == "peer-reviewed" and reviewers <= authors:
         problems.append(("review-not-independent", "peer review needs a reviewer who is not an author"))
+    licenses = {license["id"] for license in registry["licenses"]}
+    problems += _check_license(informative["provenance"]["license"], licenses, "provenance")
+    for index, vector in enumerate(informative["oracle"].get("vectors", ())):
+        problems += _check_license(vector["license"], licenses, f"vectors/{index}")
     return problems
 
 

@@ -87,5 +87,8 @@
     {"id": "tag-number.over-31-bits", "description": "Tag numbers greater than 2^31 - 1."},
     {"id": "integer.over-64-bits", "description": "Typed INTEGER and ENUMERATED values outside the signed 64-bit range."},
     {"id": "object-identifier.arc-over-64-bits", "description": "Typed OBJECT IDENTIFIER arcs greater than 2^64 - 1."}
+  ],
+  "licenses": [
+    {"id": "MIT", "name": "MIT License", "url": "https://spdx.org/licenses/MIT.html"}
   ]
 }

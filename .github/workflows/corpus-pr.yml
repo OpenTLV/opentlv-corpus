@@ -35,6 +35,8 @@ jobs:
         run: python -B scripts/check_contract.py
       - name: Check the lifecycle logs and definition digests
         run: python -B scripts/check_lifecycle.py
+      - name: Validate the corpus
+        run: python -B scripts/validate.py
       - name: Check the change against its base revision
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000')
         env:
@@ -42,3 +44,50 @@ jobs:
         run: python -B scripts/check_history.py --base "$BASE"
       - name: Test the contract rules
         run: python -B -m unittest discover -s tests -v
+
+  release:
+    name: Data release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERSION: 0.0.0-ci
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          # Published releases are reproduced from their source revisions.
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Build the release twice and compare the bytes
+        run: |
+          python -B scripts/release.py build --version "$VERSION" --output build/first
+          python -B scripts/release.py build --version "$VERSION" --output build/second
+          for file in "opentlv-corpus-data-$VERSION.tar" "opentlv-corpus-data-$VERSION.manifest.json" SHA256SUMS; do
+            cmp "build/first/$file" "build/second/$file"
+          done
+      - name: Verify the release
+        run: python -B scripts/release.py verify "build/first/opentlv-corpus-data-$VERSION.tar" --sums build/first/SHA256SUMS
+      - name: Read the release without the corpus tools
+        working-directory: build/first
+        run: |
+          sha256sum --check --strict SHA256SUMS
+          tar -xf "opentlv-corpus-data-$VERSION.tar"
+          cd "opentlv-corpus-data-$VERSION"
+          sha256sum --check --strict SHA256SUMS
+          jq --exit-status '.schema == "urn:opentlv:corpus:schema:manifest:1"' manifest.json
+          jq --raw-output '.cases[].path, .files[].path' manifest.json | while read -r path; do test -f "$path"; done
+      - name: Reproduce the published releases
+        run: |
+          for record in releases/*/; do
+            [ -d "$record" ] || continue
+            version=$(basename "$record")
+            revision=$(jq --raw-output .source.revision "${record}manifest.json")
+            git worktree add --detach "build/reproduce-$version" "$revision"
+            python -B "build/reproduce-$version/scripts/release.py" build --version "$version" \
+              --output "build/reproduced-$version" --check "${record}SHA256SUMS"
+          done

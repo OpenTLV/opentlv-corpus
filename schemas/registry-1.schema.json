@@ -2,16 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:opentlv:corpus:schema:registry:1",
   "title": "OpenTLV Corpus registry, schema version 1",
-  "description": "Registered standard editions, ID namespaces with their serial allocation, expected-reason taxonomy and capability vocabulary. See docs/identity.md.",
+  "description": "Registered standard editions, ID namespaces with their serial allocation, expected-reason taxonomy, capability vocabulary and the licenses case data may use. See docs/identity.md.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "standards", "namespaces", "reasons", "capabilities"],
+  "required": ["schema", "standards", "namespaces", "reasons", "capabilities", "licenses"],
   "properties": {
     "schema": {"const": "urn:opentlv:corpus:schema:registry:1"},
     "standards": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/standard"}},
     "namespaces": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/namespace"}},
     "reasons": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/reason"}},
-    "capabilities": {"type": "array", "items": {"$ref": "#/$defs/capability"}}
+    "capabilities": {"type": "array", "items": {"$ref": "#/$defs/capability"}},
+    "licenses": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/license"}}
   },
   "$defs": {
     "key": {
@@ -77,6 +78,17 @@
       "properties": {
         "id": {"$ref": "#/$defs/dottedKey"},
         "description": {"$ref": "#/$defs/text"}
+      }
+    },
+    "license": {
+      "description": "A license whose terms permit redistributing case data in a data release.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "url"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$", "maxLength": 64, "description": "SPDX license identifier."},
+        "name": {"$ref": "#/$defs/text"},
+        "url": {"type": "string", "pattern": "^https://"}
       }
     }
   }
