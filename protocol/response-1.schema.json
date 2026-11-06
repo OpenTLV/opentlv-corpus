@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opentlv:corpus:protocol:response:1",
+  "title": "OpenTLV Corpus adapter protocol response, version 1",
+  "description": "One message from an adapter to the harness: the answer to the request in flight, with a result or an error. Results are normalized observations of the implementation, never verdicts. See docs/adapter-protocol.md.",
+  "oneOf": [
+    {"$ref": "#/$defs/helloResponse"},
+    {"$ref": "#/$defs/executeResponse"},
+    {"$ref": "#/$defs/errorResponse"}
+  ],
+  "$defs": {
+    "helloResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "result"],
+      "properties": {
+        "id": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/requestId"},
+        "result": {"$ref": "urn:opentlv:corpus:protocol:capabilities:1"}
+      }
+    },
+    "executeResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "result"],
+      "properties": {
+        "id": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/requestId"},
+        "result": {"$ref": "#/$defs/observation"}
+      }
+    },
+    "errorResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "error"],
+      "properties": {
+        "id": {
+          "description": "The request ID, or null in a bad-request answer to a line whose ID cannot be read.",
+          "oneOf": [{"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/requestId"}, {"type": "null"}]
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": {"enum": ["version-unsupported", "bad-request", "unsupported", "not-comparable", "internal-error"]},
+            "message": {"type": "string", "maxLength": 4096, "description": "Human-readable explanation; never interpreted."}
+          }
+        }
+      },
+      "if": {"properties": {"id": {"type": "null"}}},
+      "then": {"properties": {"error": {"properties": {"code": {"const": "bad-request"}}}}}
+    },
+
+    "observation": {
+      "description": "What the implementation did. An accepting result carries exactly one of tree, value, octets or steps; a rejection carries no output except the round-trip steps completed before it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "properties": {
+        "outcome": {"enum": ["accept", "reject"]},
+        "tree": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/node"},
+        "value": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/value"},
+        "octets": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/hex"},
+        "steps": {
+          "description": "Round-trip outputs in order: decode, encode and decode again for an octets input; encode and decode for a tree or value input.",
+          "type": "array",
+          "maxItems": 3,
+          "items": {"$ref": "#/$defs/step"}
+        },
+        "reason": {
+          "$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/dottedKey",
+          "description": "Registered reason code the adapter mapped the native error to; absent when it has no mapping. Never a native error code."
+        },
+        "diagnostic": {"$ref": "#/$defs/diagnostic"}
+      },
+      "if": {"properties": {"outcome": {"const": "accept"}}},
+      "then": {
+        "oneOf": [{"required": ["tree"]}, {"required": ["value"]}, {"required": ["octets"]}, {"required": ["steps"]}],
+        "not": {"required": ["reason"]}
+      },
+      "else": {
+        "not": {"anyOf": [{"required": ["tree"]}, {"required": ["value"]}, {"required": ["octets"]}]}
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "tree": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/node"},
+        "value": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/value"},
+        "octets": {"$ref": "urn:opentlv:corpus:protocol:request:1#/$defs/hex"}
+      }
+    },
+    "diagnostic": {
+      "description": "Native diagnostic of the implementation, kept verbatim for reports.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "code": {"type": "string", "minLength": 1, "maxLength": 256},
+        "message": {"type": "string", "minLength": 1, "maxLength": 4096}
+      }
+    }
+  }
+}

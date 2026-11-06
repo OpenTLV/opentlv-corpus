@@ -362,12 +362,13 @@ def oracle_blind_view(case, key):
     """Return everything an adapter may receive to execute one assertion.
 
     The view is built from an allow list, never by removing fields, so a field
-    added to the case later stays hidden until the contract admits it.
+    added to the case later stays hidden until the contract admits it. It
+    leaves out the case ID too, which would let an adapter look up the
+    expectation; the harness relates answers to checks by request ID.
     """
     normative = case["normative"]
     assertion = next(item for item in normative["assertions"] if item["key"] == key)
-    view = {"check": f"{case['id']}/{key}",
-            "standard": copy.deepcopy(normative["standard"]),
+    view = {"standard": copy.deepcopy(normative["standard"]),
             "request": copy.deepcopy(assertion["request"]),
             "input": copy.deepcopy(normative["input"])}
     if "type" in normative:

@@ -18,6 +18,7 @@ Four versions move independently, and each consumer records the ones it uses:
 - **The data release** is the corpus version of the published cases, registry and schemas, pinned by release and SHA-256 digest.
 - **Tooling** is the version of the Python validator, resolver, runner and reporter.
 - **The adapter protocol** has its own version, so adapters do not change when only data or tooling does.
+  Its schemas have their own URNs, such as `urn:opentlv:corpus:protocol:request:1`, and [Adapter process protocol](adapter-protocol.md#versioning) specifies how it changes.
 
 A [data release](release.md) ships the exact schema files its documents use, so a consumer can validate a release without the Python tooling and without fetching anything else.
 Its manifest records the data release version, the source revision and the tooling version, and each document records its schema version.

@@ -1,0 +1,19 @@
+{"title": "Requests an adapter answers with bad-request, after which it stays in step with the harness", "stub_arguments": []}
+{"send": {"id": "1", "method": "execute", "params": {"standard": {"ref": "itu-t-x690-2021-02", "rules": "der"}, "request": {"operation": "decode", "strictness": "strict", "view": "tree"}, "input": {"octets": "020105"}}}}
+{"receive": {"id": "1", "error": {"code": "bad-request", "message": "hello must come first"}}, "status": "bad-request"}
+{"send": {"id": "2", "method": "hello", "params": {"protocols": [1], "max_message_octets": 4194304}}}
+{"receive": {"id": "2", "result": {"protocol": 1, "adapter": {"name": "opentlv-corpus-stub-adapter", "version": "1.0.0"}, "implementation": {"name": "stub-der-tree", "version": "1.0.0"}, "supports": [{"standard": "itu-t-x690-2021-02", "rules": ["der"], "operations": ["decode", "encode", "round-trip"], "strictness": ["strict"], "views": ["tree"]}], "provides": [], "limits": {"max_message_octets": 1048576, "max_input_octets": 65536, "max_depth": 32}}}, "status": "completed"}
+{"send_raw": "{\"id\":\"3\",\"method\":\"hello\"", "method": "execute", "id": null}
+{"receive": {"id": null, "error": {"code": "bad-request", "message": "the line is not JSON"}}, "status": "bad-request"}
+{"send_raw": "[\"execute\"]", "method": "execute", "id": null}
+{"receive": {"id": null, "error": {"code": "bad-request", "message": "the request is not a JSON object"}}, "status": "bad-request"}
+{"send_raw": "{\"id\":\"4\",\"method\":\"shutdown\",\"params\":{}}", "method": "execute", "id": "4"}
+{"receive": {"id": "4", "error": {"code": "bad-request", "message": "unknown method 'shutdown'"}}, "status": "bad-request"}
+{"send_raw": "{\"id\":\"5\",\"method\":\"execute\"}", "method": "execute", "id": "5"}
+{"receive": {"id": "5", "error": {"code": "bad-request", "message": "a request has exactly an id, a method and object params"}}, "status": "bad-request"}
+{"send": {"id": "6", "method": "hello", "params": {"protocols": [1], "max_message_octets": 4194304}}}
+{"receive": {"id": "6", "error": {"code": "bad-request", "message": "hello was already answered"}}, "status": "bad-request"}
+{"send": {"id": "7", "method": "execute", "params": {"standard": {"ref": "itu-t-x690-2021-02", "rules": "der"}, "request": {"operation": "decode", "strictness": "strict", "view": "tree"}, "input": {"octets": "020105"}}}}
+{"receive": {"id": "7", "result": {"outcome": "accept", "tree": {"class": "universal", "constructed": false, "number": "2", "contents": "05"}}}, "status": "completed"}
+{"close": true}
+{"exit": 0}

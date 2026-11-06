@@ -226,10 +226,12 @@ Untriaged or security-sensitive fuzzing material is never imported into a public
 
 ## Oracle-blind requests
 
-An adapter receives only the oracle-blind view of one assertion: the check ID, `standard`, `type`, `input` and that assertion's `request`.
-It never receives `expect`, `clauses`, `requires`, `informative` or any other field.
+An adapter receives only the oracle-blind view of one assertion: `standard`, `type`, `input` and that assertion's `request`.
+It never receives `expect`, `clauses`, `requires`, `informative` or any other field, and not the case ID either, which would let it look up the expectation.
+The harness relates each answer to its check by a request ID of its own.
 `oracle_blind_view` in [`scripts/check_contract.py`](../scripts/check_contract.py) builds the view from this allow list rather than by removing fields, so a field added later stays hidden until the contract admits it.
 The schema keeps the blind parts closed: `request` and `input` reject unknown fields, so no expectation can be placed inside them.
+The [adapter process protocol](adapter-protocol.md) sends exactly this view as the parameters of an `execute` request.
 The verdict engine is the only component that reads expectations.
 
 ## Checks

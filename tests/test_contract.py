@@ -240,9 +240,9 @@ class OracleBlindTest(unittest.TestCase):
             for assertion in case["normative"]["assertions"]:
                 with self.subTest(f"{name}/{assertion['key']}"):
                     view = contract.oracle_blind_view(case, assertion["key"])
-                    self.assertLessEqual(set(view), {"check", "standard", "request", "input", "type"})
+                    self.assertLessEqual(set(view), {"standard", "request", "input", "type"})
                     self.assertEqual(contract.expectation_keys(view), set())
-                    self.assertEqual(view["check"], f"{case['id']}/{assertion['key']}")
+                    self.assertNotIn(case["id"], json.dumps(view))
                     self.assertEqual(view["request"], assertion["request"])
                     self.assertNotIn(json.dumps(assertion["expect"], sort_keys=True), json.dumps(view, sort_keys=True))
 
