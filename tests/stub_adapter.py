@@ -20,6 +20,7 @@ import json
 import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 import time
 
@@ -28,7 +29,10 @@ STANDARD = "itu-t-x690-2021-02"
 MAX_DEPTH = 32
 CLASSES = ("universal", "application", "context", "private")
 REQUEST_ID = re.compile(r"[0-9A-Za-z._-]{1,64}")
-MODES = ("crash", "hang", "garbage", "wrong-id", "huge", "noise", "internal", "not-comparable", "quit", "unsolicited")
+MODES = ("crash", "hang", "garbage", "wrong-id", "huge", "noise", "internal", "not-comparable", "quit", "unsolicited",
+         "hog", "orphan")
+# What the hog mode allocates before it answers: far beyond the memory limit of the runner tests.
+HOG_OCTETS = 1 << 30
 
 
 class Reject(Exception):
@@ -271,6 +275,15 @@ class Stub:
                 os._exit(3)
             if mode == "hang":
                 time.sleep(3600)
+            if mode == "hog":
+                # Under a memory limit the allocation fails and the stub exits with a MemoryError traceback.
+                hog = bytearray(HOG_OCTETS)
+                hog[-1] = 1
+            if mode == "orphan":
+                # A child that outlives the stub unless the harness kills the whole process tree.
+                child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(3600)"])
+                Path(self.args.child_file).write_text(str(child.pid))
+                time.sleep(3600)
             output = write(reply)
             if mode == "garbage":
                 output = b"this is not json\n"
@@ -315,6 +328,7 @@ def main(argv=None):
     parser.add_argument("--stderr", action="store_true", help="log every answer to standard error")
     parser.add_argument("--record", help="append every request line it reads to this file")
     parser.add_argument("--launch-file", help="count the launches of the adapter in this file")
+    parser.add_argument("--child-file", help="write the process ID of the orphan mode's child to this file")
     parser.add_argument("--vary-identity", action="store_true", help="report the launch count in the adapter version")
     parser.add_argument("--ignore-eof", action="store_true", help="keep running after standard input ends")
     parser.add_argument("--exit-status", type=int, default=0, help="exit status after standard input ends")

@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opentlv:corpus:schema:observations:1",
+  "title": "OpenTLV Corpus observation log, schema version 1",
+  "description": "One line of the JSON Lines log a run of a resolved execution plan writes: what the adapter answered to each check, how each exchange was classified, the native diagnostics, the session events and the provenance of the run. It holds no expectation and no verdict. The first line is the run record and the last one the end record; a log without an end record is incomplete. See docs/runner.md.",
+  "type": "object",
+  "required": ["record"],
+  "oneOf": [
+    {"$ref": "#/$defs/run"},
+    {"$ref": "#/$defs/check"},
+    {"$ref": "#/$defs/session"},
+    {"$ref": "#/$defs/end"}
+  ],
+  "$defs": {
+    "run": {
+      "description": "The first line: what was run, against what, by what, where and with which bounds.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "resolved", "plan", "corpus", "tools", "adapter", "descriptor", "command",
+                   "limits", "containment", "retries", "environment", "started"],
+      "properties": {
+        "schema": {"const": "urn:opentlv:corpus:schema:observations:1"},
+        "record": {"const": "run"},
+        "resolved": {"$ref": "#/$defs/digest", "description": "Identity of the resolved execution plan that was run."},
+        "plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "digest"],
+          "properties": {
+            "name": {"$ref": "#/$defs/key"},
+            "digest": {"$ref": "#/$defs/digest"}
+          }
+        },
+        "corpus": {
+          "description": "The data release: its version, the SHA-256 of its archive and its source revision.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["release", "sha256", "revision"],
+          "properties": {
+            "release": {"$ref": "#/$defs/version"},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "revision": {"type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"}
+          }
+        },
+        "tools": {"$ref": "#/$defs/component", "description": "The tooling that ran the plan."},
+        "adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocol", "adapter", "implementation", "descriptor"],
+          "properties": {
+            "protocol": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+            "adapter": {"$ref": "#/$defs/component"},
+            "implementation": {"$ref": "#/$defs/component"},
+            "descriptor": {"$ref": "#/$defs/digest"}
+          }
+        },
+        "descriptor": {
+          "description": "The complete capability descriptor of the handshake, as the adapter answered it; see protocol/capabilities-1.schema.json.",
+          "type": "object"
+        },
+        "command": {
+          "description": "The argument vector the adapter was started with.",
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string"}
+        },
+        "limits": {
+          "description": "The harness limits the run enforced.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hello_timeout_ms", "execute_timeout_ms", "exit_timeout_ms", "max_message_octets", "stderr_octets"],
+          "properties": {
+            "hello_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+            "execute_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+            "exit_timeout_ms": {"$ref": "#/$defs/milliseconds"},
+            "max_message_octets": {"type": "integer", "minimum": 4096, "maximum": 2147483647},
+            "stderr_octets": {"type": "integer", "minimum": 0, "maximum": 2147483647}
+          }
+        },
+        "containment": {
+          "description": "How the platform contained the adapter processes. tree: what kills an adapter with every process it started. memory: what enforced memory_octets, unenforced when the platform cannot, none without a limit.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tree", "memory"],
+          "properties": {
+            "tree": {"enum": ["process-group", "job-object"]},
+            "memory": {"enum": ["none", "rlimit-as", "job-object", "unenforced"]},
+            "memory_octets": {"type": "integer", "minimum": 1}
+          },
+          "if": {"properties": {"memory": {"const": "none"}}},
+          "then": {"not": {"required": ["memory_octets"]}},
+          "else": {"required": ["memory_octets"]}
+        },
+        "retries": {
+          "description": "repeat_failures: how often a crashed, timed-out or protocol-breaking request was repeated in a new process. start_attempts: how often the adapter was started before an infrastructure failure ended the session.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repeat_failures", "start_attempts"],
+          "properties": {
+            "repeat_failures": {"type": "integer", "minimum": 0, "maximum": 100},
+            "start_attempts": {"type": "integer", "minimum": 1, "maximum": 100}
+          }
+        },
+        "environment": {
+          "description": "The platform of the run.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["system", "release", "machine", "python"],
+          "properties": {
+            "system": {"type": "string"},
+            "release": {"type": "string"},
+            "machine": {"type": "string"},
+            "python": {"type": "string"}
+          }
+        },
+        "started": {"$ref": "#/$defs/time"},
+        "handshake": {"$ref": "#/$defs/handshake"}
+      }
+    },
+    "handshake": {
+      "description": "The first handshake: its request ID, duration and native diagnostics.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request", "duration_ms"],
+      "properties": {
+        "request": {"$ref": "#/$defs/requestId"},
+        "duration_ms": {"$ref": "#/$defs/duration"},
+        "stderr": {"$ref": "#/$defs/stderr"}
+      }
+    },
+    "check": {
+      "description": "One check of the resolved plan, in plan order, and what happened to its request.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record", "case", "assertion", "digest", "status", "execution"],
+      "properties": {
+        "record": {"const": "check"},
+        "case": {"type": "string", "pattern": "^[a-z][a-z0-9]{0,15}\\.[a-z][a-z0-9]{0,15}\\.(?!000000)[0-9]{6}$"},
+        "assertion": {"$ref": "#/$defs/key"},
+        "digest": {"$ref": "#/$defs/digest", "description": "Definition digest of the case."},
+        "status": {"enum": ["active", "deprecated"], "description": "Lifecycle status of the case in the release."},
+        "execution": {"$ref": "#/$defs/execution"},
+        "problem": {"$ref": "#/$defs/problem"},
+        "detail": {"type": "string", "minLength": 1},
+        "request": {"$ref": "#/$defs/requestId"},
+        "result": {"type": "object", "description": "The result the adapter answered: the raw observation the verdict engine evaluates."},
+        "error": {"$ref": "#/$defs/error"},
+        "answer": {"$ref": "#/$defs/answer"},
+        "stderr": {"$ref": "#/$defs/stderr"},
+        "exit_status": {"type": "integer"},
+        "duration_ms": {"$ref": "#/$defs/duration"},
+        "repetitions": {
+          "description": "Repetitions of a failed request in new processes; they never replace the first execution.",
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/attempt"}
+        }
+      },
+      "allOf": [{"$ref": "#/$defs/outcome"}]
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution"],
+      "properties": {
+        "execution": {"$ref": "#/$defs/execution"},
+        "problem": {"$ref": "#/$defs/problem"},
+        "detail": {"type": "string", "minLength": 1},
+        "request": {"$ref": "#/$defs/requestId"},
+        "result": {"type": "object"},
+        "error": {"$ref": "#/$defs/error"},
+        "answer": {"$ref": "#/$defs/answer"},
+        "stderr": {"$ref": "#/$defs/stderr"},
+        "exit_status": {"type": "integer"},
+        "duration_ms": {"$ref": "#/$defs/duration"}
+      },
+      "allOf": [{"$ref": "#/$defs/outcome"}]
+    },
+    "outcome": {
+      "description": "Only a completed exchange has a result, and only a request that was sent has a request ID.",
+      "allOf": [
+        {
+          "if": {"properties": {"execution": {"const": "completed"}}},
+          "then": {"required": ["request", "result"], "not": {"anyOf": [{"required": ["problem"]}, {"required": ["error"]}, {"required": ["answer"]}]}},
+          "else": {"required": ["detail"], "not": {"required": ["result"]}}
+        },
+        {
+          "if": {"properties": {"execution": {"const": "not-run"}}},
+          "then": {"not": {"anyOf": [{"required": ["request"]}, {"required": ["error"]}, {"required": ["answer"]}, {"required": ["repetitions"]}]}}
+        }
+      ]
+    },
+    "session": {
+      "description": "An event of the adapter session outside the classification of a request, such as a restart or a non-zero exit status.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record", "event", "detail"],
+      "properties": {
+        "record": {"const": "session"},
+        "event": {"enum": ["restart", "unsolicited-output", "exited", "exit-timeout", "exit-status", "start-failed",
+                           "adapter-changed"]},
+        "detail": {"type": "string", "minLength": 1},
+        "check": {"type": "string", "description": "The check being run when the event happened, <case-id>/<assertion-key>."},
+        "stderr": {"$ref": "#/$defs/stderr"}
+      }
+    },
+    "end": {
+      "description": "The last line: the run reached its end. complete is false when the session ended before every check was run.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record", "finished", "complete", "checks", "executions", "restarts"],
+      "properties": {
+        "record": {"const": "end"},
+        "finished": {"$ref": "#/$defs/time"},
+        "complete": {"type": "boolean"},
+        "checks": {"type": "integer", "minimum": 0},
+        "executions": {
+          "description": "The number of checks with each execution status.",
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/execution"},
+          "additionalProperties": {"type": "integer", "minimum": 1}
+        },
+        "restarts": {"type": "integer", "minimum": 0},
+        "exit_status": {"type": "integer", "description": "The exit status of the last adapter process; absent when none was running."}
+      }
+    },
+    "execution": {
+      "description": "The classification of the exchange in the adapter protocol, or not-run for a request the harness never sent because the session ended.",
+      "enum": ["completed", "unsupported", "not-comparable", "bad-request", "protocol-error", "crashed", "timeout",
+               "harness-error", "not-run"]
+    },
+    "problem": {"type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "maxLength": 64},
+    "error": {
+      "description": "The error the adapter answered, verbatim.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {"type": "string"},
+        "message": {"type": "string"}
+      }
+    },
+    "answer": {
+      "description": "The raw answer line of a protocol error, without its line feed: as text when it is UTF-8, otherwise in hexadecimal.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "text": {"type": "string"},
+        "hex": {"type": "string", "pattern": "^([0-9a-f]{2})*$"}
+      }
+    },
+    "stderr": {"type": "string", "minLength": 1, "description": "What the adapter wrote to its standard error, within the limit; never parsed."},
+    "requestId": {"type": "string", "pattern": "^[0-9A-Za-z._-]{1,64}$"},
+    "duration": {"type": "integer", "minimum": 0},
+    "time": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"},
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "version": {
+      "description": "Semantic Versioning 2.0.0 version without build metadata.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?$",
+      "maxLength": 64
+    },
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "milliseconds": {"type": "integer", "minimum": 1, "maximum": 86400000},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 128},
+        "version": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    }
+  }
+}

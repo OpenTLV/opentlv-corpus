@@ -33,7 +33,8 @@ ROOT = check_contract.ROOT
 SCHEMA_URN = "urn:opentlv:corpus:schema:{kind}:{version}"
 SCHEMA_FILE = re.compile(r"([a-z]+)-([1-9][0-9]*)\.schema\.json")
 # Document kinds and the schema version of each that this tooling checks.
-SUPPORTED = {"case": 1, "registry": 1, "lifecycle": 1, "manifest": 1, "plan": 1, "resolution": 1}
+SUPPORTED = {"case": 1, "registry": 1, "lifecycle": 1, "manifest": 1, "plan": 1, "resolution": 1,
+             "observations": 1}
 DOCUMENT_DIRS = ("schemas", "registry", "cases", "examples", "releases")
 REGISTRY = "registry/registry.json"
 LICENSE = "LICENSE"
