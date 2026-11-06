@@ -49,7 +49,7 @@
       "title": "Schema examples using the Distinguished Encoding Rules",
       "rules": "der",
       "standards": ["itu-t-x690-2021-02"],
-      "allocated": 6
+      "allocated": 9
     }
   ],
   "reasons": [

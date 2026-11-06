@@ -1,0 +1,75 @@
+{
+  "phase": "0.x",
+  "cases": [
+    {
+      "id": "example.ber.000001",
+      "status": "active",
+      "digest": "sha256:45abb8796f5d47856084e48f4633e77680079ccec9028070921d7e6c5e16fbdc"
+    },
+    {
+      "id": "example.ber.000002",
+      "status": "active",
+      "digest": "sha256:552c5c6435ec1c27cfb80aba9654e10ddbf6f8b6f97f23570a5500fa29a44b95"
+    },
+    {
+      "id": "example.der.000001",
+      "status": "active",
+      "digest": "sha256:b4739538d50f8646aaa4af52e9f34543febba63189e821f9ea79f0afa2041449"
+    },
+    {
+      "id": "example.der.000002",
+      "status": "active",
+      "digest": "sha256:1953e4f439abd653231c2d2108343683f542dcff34e2d25cbbfc15755a1acbcf"
+    },
+    {
+      "id": "example.der.000003",
+      "status": "active",
+      "digest": "sha256:af638abef3af0d6c65700c7c3193ba28477844e7a341345df92f11374cb0e07c"
+    },
+    {
+      "id": "example.der.000004",
+      "status": "active",
+      "digest": "sha256:689cd7ae7460e2de90bb6d7a4e397525a02c8b4f4686f25f3c4c654947609565"
+    },
+    {
+      "id": "example.der.000005",
+      "status": "active",
+      "digest": "sha256:f69a0d37a2d3574aee2b3b82e7f9f3b82b246e87c74a07f0891f7baae0f4a1e0"
+    },
+    {
+      "id": "example.der.000006",
+      "status": "active",
+      "digest": "sha256:a33015c08b10dcf4edad7aea67bc199eb3a286b2214963f0dcb48966ddd4ef7f"
+    },
+    {
+      "id": "example.der.000007",
+      "status": "invalid",
+      "digest": "sha256:ebe77355bbe8461b4383d66fb4a842495fd56a747bd0fa143ce72dc6dc0f3e9d",
+      "replacement": "example.der.000008",
+      "events": [
+        2
+      ]
+    },
+    {
+      "id": "example.der.000008",
+      "status": "active",
+      "digest": "sha256:3989bc1e7142f792b2d3a8db85ebc2a36a45209f536accf47b700f6e6395b04d"
+    },
+    {
+      "id": "example.der.000009",
+      "status": "deprecated",
+      "digest": "sha256:1a9fce60bc0c456cb99b038d01b5ab7d11bbc54a7d7eda0246fc561198f7db59",
+      "replacement": "example.der.000001",
+      "events": [
+        1
+      ]
+    }
+  ],
+  "tainted": [
+    {
+      "case": "example.der.000007",
+      "digest": "sha256:ebe77355bbe8461b4383d66fb4a842495fd56a747bd0fa143ce72dc6dc0f3e9d",
+      "event": 2
+    }
+  ]
+}

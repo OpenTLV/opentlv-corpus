@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opentlv:corpus:schema:lifecycle:1",
+  "title": "OpenTLV Corpus lifecycle log, schema version 1",
+  "description": "Append-only log of lifecycle events of published test case definitions: deprecation, invalidation, reinstatement and in-place revision, each bound to a definition digest and reviewed. See docs/lifecycle.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "phase", "events"],
+  "properties": {
+    "schema": {"const": "urn:opentlv:corpus:schema:lifecycle:1"},
+    "phase": {
+      "description": "0.x permits reviewed in-place revisions of a definition; stable permits only representation revisions. A log never returns from stable to 0.x.",
+      "enum": ["0.x", "stable"]
+    },
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}}
+  },
+  "$defs": {
+    "caseId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{0,15}\\.[a-z][a-z0-9]{0,15}\\.(?!000000)[0-9]{6}$"
+    },
+    "digest": {
+      "description": "Canonical definition digest: SHA-256 of the RFC 8785 serialization of schema, id and normative.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "text": {"type": "string", "minLength": 1},
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewers", "date"],
+      "properties": {
+        "status": {"enum": ["self-reviewed", "peer-reviewed"]},
+        "reviewers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+        "date": {"type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"}
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "case", "digest", "event", "reason", "actor", "review"],
+      "properties": {
+        "seq": {
+          "description": "Position in the log, starting at 1. Reports reference events by it.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "case": {"$ref": "#/$defs/caseId"},
+        "digest": {
+          "$ref": "#/$defs/digest",
+          "description": "Digest of the definition the event applies to; for revise, the definition before the revision."
+        },
+        "event": {"enum": ["deprecate", "invalidate", "reinstate", "revise"]},
+        "reason": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "detail"],
+          "properties": {
+            "code": {
+              "enum": ["superseded", "duplicate", "out-of-scope", "expectation-wrong", "definition-wrong",
+                       "deprecation-withdrawn", "representation"]
+            },
+            "detail": {"$ref": "#/$defs/text"}
+          }
+        },
+        "replacement": {
+          "$ref": "#/$defs/caseId",
+          "description": "Case to use instead. It must be active when the event is recorded."
+        },
+        "revised_digest": {
+          "$ref": "#/$defs/digest",
+          "description": "Digest of the definition after a revise event."
+        },
+        "actor": {"$ref": "#/$defs/text", "description": "Person who decided the event."},
+        "review": {"$ref": "#/$defs/review"},
+        "reference": {"type": "string", "pattern": "^https://", "description": "Issue or pull request with the discussion."}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["event"], "properties": {"event": {"const": "deprecate"}}},
+          "then": {
+            "properties": {"reason": {"properties": {"code": {"enum": ["superseded", "duplicate", "out-of-scope"]}}}},
+            "not": {"required": ["revised_digest"]}
+          }
+        },
+        {
+          "if": {"required": ["event"], "properties": {"event": {"const": "invalidate"}}},
+          "then": {
+            "properties": {"reason": {"properties": {"code": {"enum": ["expectation-wrong", "definition-wrong"]}}}},
+            "not": {"required": ["revised_digest"]}
+          }
+        },
+        {
+          "if": {"required": ["event"], "properties": {"event": {"const": "reinstate"}}},
+          "then": {
+            "properties": {"reason": {"properties": {"code": {"const": "deprecation-withdrawn"}}}},
+            "not": {"anyOf": [{"required": ["replacement"]}, {"required": ["revised_digest"]}]}
+          }
+        },
+        {
+          "if": {"required": ["event"], "properties": {"event": {"const": "revise"}}},
+          "then": {
+            "properties": {"reason": {"properties": {"code": {"enum": ["expectation-wrong", "definition-wrong", "representation"]}}}},
+            "required": ["revised_digest"],
+            "not": {"required": ["replacement"]}
+          }
+        },
+        {
+          "if": {"required": ["reason"], "properties": {"reason": {"required": ["code"], "properties": {"code": {"enum": ["superseded", "duplicate"]}}}}},
+          "then": {"required": ["replacement"]}
+        }
+      ]
+    }
+  }
+}
